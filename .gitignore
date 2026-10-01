@@ -6,3 +6,6 @@ build/
 *.log
 .DS_Store
 tmp/
+
+# Local development requirements and checklist
+/PROJECT_PLAN.local.md
