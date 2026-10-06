@@ -14,3 +14,5 @@ tmp/
 # Local development requirements and checklist
 /PROJECT_PLAN.local.md
 /FRONTEND_STRUCTURE.local.md
+/README.temporary.md
+/commit-history.local.ps1
