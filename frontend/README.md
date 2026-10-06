@@ -14,19 +14,18 @@ npm run dev:front
 
 Open the local URL printed by Quasar, then choose **Try Sideby**. Demo login: `alex@loop.demo` / `LoopDemo123!`. Registration also works with sample details. The chat route is `/#/chat`; unauthenticated visits go to `/#/auth/login`.
 
-## The requested 70% scope
+## The requested 60% scope
 
-This is an approximate frontend milestone, not a claim that 70% of the full assignment or its backend is finished. The seven core prototype areas below are implemented; advanced behavior is deliberately left for the remaining milestone.
+The milestone has been reduced from approximately 70% to 60% by removing the complete history/search feature from the current implementation. This is a planning estimate, not a measured percentage of the assignment or backend. The six core areas below remain implemented, and the teammate has a concrete next feature to own.
 
-| Core area                | Implemented                                                                                                                                                |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Workspace                | Workspace rail, channel filtering, responsive navigation drawer, fixed composer, member panel/dialog                                                       |
-| Accounts                 | Login, registration, validation, unique normalized nickname/email, route guard, logout and state clearing                                                  |
-| Channels                 | Browse/join public channels; create public/private channels; leave; administrator deletion confirmation                                                    |
-| Invitations and commands | Immediate invitations, unseen invitation highlight/top placement, `/join`, `/invite`, `/list`, `/cancel`, `/quit`, `/help`, syntax and permission feedback |
-| Messaging                | Per-channel messages, Enter/send button, Shift+Enter, exact member mentions, recipient highlighting, mention suggestions, safe text rendering              |
-| History                  | Latest 20 messages, older cursor pages on upward scrolling or button, deduplication, scroll-offset preservation, search within loaded messages             |
-| Members and UI states    | Member identities, administrator marker, sample presence badges, loading/empty/error/retry states, keyboard labels and focus styles                        |
+| Core area                | Implemented                                                                                                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace                | Workspace rail, channel filtering, responsive navigation drawer, fixed composer, member panel/dialog                                                                   |
+| Accounts                 | Login, registration, validation, unique normalized nickname/email, route guard, logout and state clearing                                                              |
+| Channels                 | Browse/join public channels; create public/private channels; leave; administrator deletion confirmation                                                                |
+| Invitations and commands | Immediate invitations, unseen invitation highlight/top placement, `/join`, `/invite`, `/list`, `/cancel`, `/quit`, `/help`, syntax and permission feedback             |
+| Messaging                | Latest 20 messages per channel plus new sends, Enter/send button, Shift+Enter, exact member mentions, recipient highlighting, mention suggestions, safe text rendering |
+| Members and UI states    | Member identities, administrator marker, sample presence badges, loading/empty/error/retry states, keyboard labels and focus styles                                    |
 
 ### Remaining scope — intentionally not implemented
 
@@ -35,6 +34,28 @@ This is an approximate frontend milestone, not a claim that 70% of the full assi
 - Integration and finalization: agreed API/event contracts, real authentication and authorization, real-time transport, cross-tab synchronization, PWA install/service worker, full desktop/mobile acceptance walkthrough and screenshots.
 
 Direct messages, attachments, reactions, and editing are not part of the assignment's required scope and are not presented as working controls.
+
+## Teammate handoff: message history and search
+
+This is a proposed ownership boundary to agree together. The implementation was removed, not hidden behind a flag. Recent messages and sending still work. All stored messages and the 50-message general-channel fixture are retained.
+
+Start with these files:
+
+- `src/services/mock/workspace.js`: currently exposes `recentMessages(channelId)` returning `Promise<{ items }>`, limited to 20 messages. Add a member-authorized history API with a stable cursor, bounded page sizes, and an end-of-history signal. Agree the real API contract with the backend teammate.
+- `src/features/chat/messages.store.js`: add pagination state, older-page actions, concurrent-request handling, page merging, and retry behavior. Preserve session/channel invalidation guards and send deduplication.
+- `src/features/chat/components/MessageList.vue`: implement upward infinite scrolling, an accessible manual fallback, and scroll-position preservation when prepending older messages.
+- `src/features/chat/components/ChatHeader.vue` and `src/pages/ChatPage.vue`: add search controls and query state. Define whether search covers loaded messages or all history, and label it accurately.
+
+Acceptance criteria:
+
+- [ ] Reach all 50 seeded general-channel messages with no gaps or duplicates.
+- [ ] Preserve the visible message position when prepending, including during a new send.
+- [ ] Rapid channel switching, leaving, or signing out must not reveal stale/private messages.
+- [ ] Loading, empty, error, retry, and end-of-history states work on desktop and mobile.
+- [ ] Search has clear scope, a clear action, and useful no-results behavior; switching channels clears the query.
+- [ ] Verify the service contract and complete a visual walkthrough together.
+
+History is assignment UC7. Message search is an additional frontend feature, not a required assignment deliverable. The remaining moderation, live behavior, integration, and PWA work above also provide substantial opportunities for shared development.
 
 ## Architecture and prototype decisions
 
@@ -46,7 +67,7 @@ Direct messages, attachments, reactions, and editing are not part of the assignm
 - Names are case-insensitive, normalized to lowercase, and use 2–32 letters, numbers, hyphens, or underscores. A nickname/channel name must begin with a letter or number.
 - Invitations provisionally add membership immediately; opening the channel clears its unseen marker. This follows the proposed default in the project plan and still needs instructor/team confirmation for the final implementation.
 - An administrator leaving deletes the channel and its messages; both UI actions and commands use the same confirmation and store operation. An ordinary member leaving loses access and cached messages. Private re-entry requires another invitation.
-- Mentions recognize complete member nicknames, ignore email substrings and unknown nicknames, and allow multiple recipients. Drafts clear when switching channels. Search explicitly covers loaded messages, not an unimplemented server search.
+- Mentions recognize complete member nicknames, ignore email substrings and unknown nicknames, and allow multiple recipients. Drafts clear when switching channels. Only the most recent 20 messages are fetched when a channel is first opened; new messages sent in the current session are appended. Older messages remain stored but cannot yet be retrieved through the frontend service. Message search is not implemented at this milestone.
 
 ## Verification
 
@@ -57,7 +78,7 @@ npm run lint:check
 npm run build
 ```
 
-All 14 existing behavior checks passed after the redesign. The frontend test files and `test` npm script were then removed at the user's request. Lint and production build remain available as the ongoing checks.
+The earlier 70% version passed 14 behavior checks before its test files were removed at the user's request. Those results do not verify this reduced version. The current milestone passed lint, the production build, and a targeted in-memory service/store smoke check; no test files or test npm script were added.
 
 **Browser walkthrough remains unverified:** browser access to the local preview was denied in the implementation session. Responsive CSS is implemented, but desktop/mobile layout, keyboard, focus, and scroll behavior still require a visual walkthrough. Do not treat this milestone as verification of all 11 assignment use cases.
 
@@ -65,7 +86,7 @@ All 14 existing behavior checks passed after the redesign. The frontend test fil
 
 1. Enter the demo, switch channels, and open `launch-room` to clear its invitation badge.
 2. Send a message and an `@alex` mention; test Shift+Enter and an invalid slash command.
-3. Scroll up in `general` to reach all 50 seeded messages; check scroll stability and search.
+3. Open `general` and confirm that only the latest 20 stored messages load, a new message appends, and there is no older-history or message-search control.
 4. Create a private channel, invite `mia`, and inspect `/list`.
 5. Try `/quit` in `general` to see the permission error; use `/cancel` in your own channel and inspect the deletion confirmation.
 6. Leave a public channel and rejoin it through Browse channels. Sign out, register a sample account, and sign back in to verify isolation.

@@ -10,28 +10,23 @@ export const useMessagesStore = defineStore('messages', () => {
     (byChannel.value[id] ||= {
       items: [],
       loading: false,
-      hasMore: false,
       loaded: false,
       error: ''
     })
-  async function load(id, older = false) {
+  async function load(id) {
     const state = stateFor(id)
-    if (state.loading || (older && !state.hasMore)) return
+    if (state.loading) return
     const ticket = generation
     const revision = revisions.get(id)
     state.loading = true
     state.error = ''
     try {
-      const result = await workspaceService.history(
-        id,
-        older ? { before: state.items[0]?.id } : {}
-      )
+      const result = await workspaceService.recentMessages(id)
       if (ticket !== generation || revision !== revisions.get(id)) return
       const items = [...result.items, ...state.items]
       state.items = Array.from(
         new Map(items.map(item => [item.id, item])).values()
       ).sort((a, b) => a.id - b.id)
-      state.hasMore = result.hasMore
       state.loaded = true
     } catch (cause) {
       state.error = cause.message

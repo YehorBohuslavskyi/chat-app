@@ -241,19 +241,19 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         const channel = channelFor(id)
         return data.users.filter(user => channel.memberIds.includes(user.id))
       }),
-    history: (id, { before = Infinity, limit = 20 } = {}) =>
+    // 60% milestone: recent messages only. Full history is the teammate's next feature.
+    recentMessages: id =>
       run(() => {
         channelFor(id)
         const messages = data.messages.filter(
-          message => message.channelId === id && message.id < before
+          message => message.channelId === id
         )
-        const items = messages.slice(-Math.max(1, Math.min(limit, 50)))
+        const items = messages.slice(-20)
         return {
           items: items.map(message => ({
             ...message,
             sender: data.users.find(user => user.id === message.senderId)
-          })),
-          hasMore: messages.length > items.length
+          }))
         }
       }),
     sendMessage: (id, body) =>

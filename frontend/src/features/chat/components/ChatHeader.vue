@@ -1,6 +1,6 @@
 <script setup>
-defineProps({ channel: Object, membersOpen: Boolean, search: String })
-defineEmits(['members', 'invite', 'leave', 'help', 'update:search'])
+defineProps({ channel: Object, membersOpen: Boolean })
+defineEmits(['members', 'invite', 'leave', 'help'])
 </script>
 <template>
   <header class="channel-header"
@@ -53,18 +53,8 @@ defineEmits(['members', 'invite', 'leave', 'help', 'update:search'])
   <div class="channel-subheader"
     ><div class="conversation-tab"
       ><q-icon name="chat_bubble_outline" size="15px" /> Messages</div
-    ><q-input
-      :model-value="search"
-      @update:model-value="$emit('update:search', $event || '')"
-      borderless
-      dense
-      clearable
-      placeholder="Search loaded messages"
-      aria-label="Search loaded messages"
-      class="message-search"
-      ><template #prepend
-        ><q-icon name="search" size="17px" /></template></q-input
-  ></div>
+    ></div
+  >
 </template>
 <style scoped>
 .channel-header {
@@ -154,16 +144,6 @@ p {
   font-size: 13px;
   font-weight: 600;
 }
-.message-search {
-  width: 195px;
-}
-.message-search :deep(input) {
-  font-size: 12px;
-}
-.message-search :deep(.q-field__prepend) {
-  padding-right: 6px;
-  color: #718176;
-}
 @media (max-width: 600px) {
   .channel-header {
     padding: 18px 16px;
@@ -179,9 +159,6 @@ p {
   }
   .header-actions {
     gap: 6px;
-  }
-  .message-search {
-    width: 150px;
   }
   .conversation-tab {
     font-size: 10px;

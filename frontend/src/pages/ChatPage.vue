@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../features/auth/auth.store.js'
 import { useChannelsStore } from '../features/channels/channels.store.js'
@@ -18,7 +18,6 @@ const channels = useChannelsStore()
 const quasar = useQuasar()
 const membersOpen = ref(quasar.screen.width >= 1250)
 const helpOpen = ref(false)
-const search = ref('')
 function inviteFromMembers() {
   membersOpen.value = false
   emit('open-channel-dialog', 'invite')
@@ -47,12 +46,6 @@ const canInvite = computed(
     channels.active?.type === 'public' ||
     channels.active?.adminId === auth.user?.id
 )
-watch(
-  () => channels.activeId,
-  () => {
-    search.value = ''
-  }
-)
 </script>
 <template>
   <section class="chat-page" aria-label="Chat workspace"
@@ -60,7 +53,6 @@ watch(
       ><ChatHeader
         :channel="channels.active"
         :members-open="membersOpen"
-        v-model:search="search"
         @members="membersOpen = !membersOpen"
         @invite="emit('open-channel-dialog', 'invite')"
         @leave="askLeave()"
@@ -70,8 +62,7 @@ watch(
             :key="channels.activeId"
             :channel="channels.active"
             :members="channels.members"
-            :user="auth.user"
-            :search="search" /><div
+            :user="auth.user" /><div
             v-if="feedback"
             class="command-feedback"
             role="status"
