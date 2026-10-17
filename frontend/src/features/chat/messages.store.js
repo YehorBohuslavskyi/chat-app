@@ -71,6 +71,33 @@ export const useMessagesStore = defineStore('messages', () => {
       if (current()) state.loadingOlder = false
     }
   }
+  // Fetch everything newer than the newest loaded message, page by page.
+  async function catchUp(id) {
+    const state = stateFor(id)
+    if (!state.loaded) return
+    const current = guard(id)
+    let hasMore = true
+    while (hasMore) {
+      const result = await workspaceService.messageHistory(id, {
+        after: state.items.at(-1)?.id ?? 0,
+        limit: 50
+      })
+      if (!current()) return
+      merge(state, result.items)
+      hasMore = result.hasMore
+    }
+  }
+  // Every channel opened in this session; unopened channels load fresh anyway.
+  async function catchUpAll() {
+    const ids = Object.keys(byChannel.value).filter(
+      id => byChannel.value[id].loaded
+    )
+    await Promise.all(ids.map(catchUp))
+  }
+  // Demo control; the message arrives through useLiveUpdates like real activity.
+  async function simulateIncoming(id) {
+    await workspaceService.simulateIncoming(id)
+  }
   async function send(id, body) {
     const current = guard(id)
     const message = await workspaceService.sendMessage(id, body)
@@ -88,5 +115,15 @@ export const useMessagesStore = defineStore('messages', () => {
     revisions.set(id, (revisions.get(id) || 0) + 1)
     delete byChannel.value[id]
   }
-  return { byChannel, load, loadOlder, send, reset, forget }
+  return {
+    byChannel,
+    load,
+    loadOlder,
+    catchUp,
+    catchUpAll,
+    simulateIncoming,
+    send,
+    reset,
+    forget
+  }
 })

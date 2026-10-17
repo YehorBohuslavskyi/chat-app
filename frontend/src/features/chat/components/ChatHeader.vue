@@ -1,6 +1,6 @@
 <script setup>
 defineProps({ channel: Object, membersOpen: Boolean })
-defineEmits(['members', 'invite', 'leave', 'help'])
+defineEmits(['members', 'invite', 'leave', 'help', 'simulate-incoming'])
 </script>
 <template>
   <header class="channel-header"
@@ -37,6 +37,12 @@ defineEmits(['members', 'invite', 'leave', 'help'])
             ><q-item clickable v-close-popup @click="$emit('help')"
               ><q-item-section avatar><q-icon name="terminal" /></q-item-section
               ><q-item-section>Command guide</q-item-section></q-item
+            ><q-item clickable v-close-popup @click="$emit('simulate-incoming')"
+              ><q-item-section avatar
+                ><q-icon name="mark_chat_unread" /></q-item-section
+              ><q-item-section
+                >Demo: receive a message from a teammate</q-item-section
+              ></q-item
             ><q-separator /><q-item
               clickable
               v-close-popup

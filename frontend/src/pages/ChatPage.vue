@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../features/auth/auth.store.js'
 import { useChannelsStore } from '../features/channels/channels.store.js'
+import { useMessagesStore } from '../features/chat/messages.store.js'
 import { useChatActions } from '../features/chat/composables/useChatActions.js'
 import ChatHeader from '../features/chat/components/ChatHeader.vue'
 import MessageList from '../features/chat/components/MessageList.vue'
@@ -16,6 +17,7 @@ import { kickThreshold } from '../services/index.js'
 const emit = defineEmits(['open-channel-dialog'])
 const auth = useAuthStore()
 const channels = useChannelsStore()
+const messages = useMessagesStore()
 const quasar = useQuasar()
 const membersOpen = ref(quasar.screen.width >= 1250)
 const helpOpen = ref(false)
@@ -42,6 +44,14 @@ const {
     helpOpen.value = true
   }
 })
+// Demo control for incoming activity; errors appear like command feedback.
+async function simulateIncoming() {
+  try {
+    await messages.simulateIncoming(channels.activeId)
+  } catch (cause) {
+    feedback.value = cause.message
+  }
+}
 const canInvite = computed(
   () =>
     channels.active?.type === 'public' ||
@@ -67,6 +77,7 @@ const canInvite = computed(
         @members="membersOpen = !membersOpen"
         @invite="emit('open-channel-dialog', 'invite')"
         @leave="askLeave()"
+        @simulate-incoming="simulateIncoming()"
         @help="helpOpen = true" /><div class="conversation-body"
         ><div class="conversation-column"
           ><MessageList

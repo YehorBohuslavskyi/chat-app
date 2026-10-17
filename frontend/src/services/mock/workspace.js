@@ -11,12 +11,23 @@ const normalize = value =>
 const validName = /^[a-z0-9][a-z0-9_-]{1,31}$/
 // Distinct member votes needed to ban someone from a public channel.
 export const kickThreshold = 3
+export const statuses = ['online', 'dnd', 'offline']
+// Sample lines for the "receive a message" demo control.
+const incomingLines = [
+  'Quick update: the latest build is ready to try.',
+  'Has anyone had a chance to look at this yet?',
+  'Thanks, that helps a lot!',
+  'I will pick this up after lunch.',
+  'Small win: the tests are green again.'
+]
 
 // Local prototype only. Production authentication and authorization belong on the server.
 export function createMockService({ storage, session, latency = 140 } = {}) {
   let data = createFixtures()
   let userId = null
   const listeners = new Set()
+  // Tells subscribers that shared data changed (another tab, or a simulated teammate).
+  const notify = () => listeners.forEach(listener => listener())
   try {
     const saved = storage?.getItem(key)
     if (saved) data = JSON.parse(saved)
@@ -40,7 +51,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     } catch {
       return
     }
-    listeners.forEach(listener => listener())
+    notify()
   })
   const currentUser = () => data.users.find(user => user.id === userId) || null
   const requireUser = () => {
@@ -350,7 +361,8 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
       }),
     // Cursor pagination: `before` is the oldest message id the client already has.
     // Ids come from one increasing sequence, so they give a stable, gap-free order.
-    messageHistory: (id, { before = null, limit = 20 } = {}) =>
+    // `before` pages backwards (older history); `after` pages forwards (missed messages).
+    messageHistory: (id, { before = null, after = null, limit = 20 } = {}) =>
       run(() => {
         channelFor(id)
         limit = Math.min(Math.max(Number(limit) || 20, 1), 50)
@@ -358,14 +370,52 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           message =>
             message.channelId === id && (before === null || message.id < before)
         )
-        const items = messages.slice(-limit)
+        // `after` continues forwards from a known message, so it takes the oldest
+        // page of newer messages; otherwise the newest page closest to `before`.
+        const matching =
+          after === null
+            ? messages
+            : messages.filter(message => message.id > after)
+        const items =
+          after === null ? matching.slice(-limit) : matching.slice(0, limit)
         return {
           items: items.map(message => ({
             ...message,
             sender: data.users.find(user => user.id === message.senderId)
           })),
-          hasMore: messages.length > items.length
+          hasMore: matching.length > items.length
         }
+      }),
+    setStatus: status =>
+      run(() => {
+        const user = requireUser()
+        if (!statuses.includes(status))
+          throw new Error('Choose online, do not disturb, or offline.')
+        user.status = status
+        save()
+        return user
+      }),
+    // Demo control: a random other member posts in the channel. The message is
+    // stored like any other; delivery to this tab goes through notify().
+    simulateIncoming: id =>
+      run(() => {
+        const channel = channelFor(id)
+        const senders = channel.memberIds.filter(item => item !== userId)
+        if (!senders.length)
+          throw new Error(
+            'Nobody else is in this channel yet. Invite someone first.'
+          )
+        data.messages.push({
+          id: ++data.sequence,
+          channelId: id,
+          senderId: senders[Math.floor(Math.random() * senders.length)],
+          body: incomingLines[Math.floor(Math.random() * incomingLines.length)],
+          createdAt: new Date().toISOString()
+        })
+        save()
+        // After this request resolves, like a server push arriving a moment later.
+        setTimeout(notify)
+        return { channelId: id }
       }),
     sendMessage: (id, body) =>
       run(() => {

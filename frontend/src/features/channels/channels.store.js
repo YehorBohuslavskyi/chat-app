@@ -91,16 +91,13 @@ export const useChannelsStore = defineStore('channels', () => {
     if (activeId.value === id) await select(id)
     return result
   }
-  // Another tab changed shared data: re-read channels and members while signed in.
-  workspaceService.onExternalChange(async () => {
+  // Re-read channels and the open channel's members after someone else's change.
+  // Called by useLiveUpdates, which decides when delivery is allowed (not offline).
+  async function sync() {
     if (!channels.value.length && !activeId.value) return
-    try {
-      await refresh()
-      await select(activeId.value)
-    } catch (cause) {
-      error.value = cause.message
-    }
-  })
+    await refresh()
+    await select(activeId.value)
+  }
   function reset() {
     selection++
     channels.value = []
@@ -125,6 +122,7 @@ export const useChannelsStore = defineStore('channels', () => {
     invite,
     kick,
     revoke,
+    sync,
     reset
   }
 })

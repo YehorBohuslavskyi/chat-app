@@ -5,6 +5,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../features/auth/auth.store.js'
 import { useChannelsStore } from '../features/channels/channels.store.js'
 import { useMessagesStore } from '../features/chat/messages.store.js'
+import { useLiveUpdates } from '../features/chat/composables/useLiveUpdates.js'
 import ChannelList from '../features/channels/components/ChannelList.vue'
 import ChannelDialog from '../features/channels/components/ChannelDialog.vue'
 import UserAvatar from '../components/UserAvatar.vue'
@@ -21,6 +22,22 @@ const dialogMode = ref('create')
 const dialogChannelId = ref(null)
 const error = ref('')
 const signingOut = ref(false)
+const { pending } = useLiveUpdates()
+const statusOptions = [
+  { value: 'online', label: 'Online', color: '#38a57e' },
+  { value: 'dnd', label: 'Do not disturb', color: '#d96d75' },
+  { value: 'offline', label: 'Offline', color: '#9498a5' }
+]
+async function changeStatus(status) {
+  error.value = ''
+  try {
+    await auth.setStatus(status)
+    // Your own row in the member list shows the new status too.
+    if (channels.activeId) await channels.select(channels.activeId)
+  } catch (cause) {
+    error.value = cause.message
+  }
+}
 function retry() {
   error.value = ''
   channels.initialize()
@@ -172,6 +189,25 @@ onMounted(() => channels.initialize())
                       }}</q-item-label></q-item-section
                     ></q-item
                   ><q-separator /><q-item
+                    v-for="option in statusOptions"
+                    :key="option.value"
+                    clickable
+                    v-close-popup
+                    :active="auth.user.status === option.value"
+                    @click="changeStatus(option.value)"
+                    ><q-item-section avatar
+                      ><q-icon
+                        name="circle"
+                        size="12px"
+                        :style="{ color: option.color }" /></q-item-section
+                    ><q-item-section>{{ option.label }}</q-item-section
+                    ><q-item-section
+                      v-if="auth.user.status === option.value"
+                      side
+                      ><q-icon
+                        name="check"
+                        size="18px" /></q-item-section></q-item
+                  ><q-separator /><q-item
                     clickable
                     :disable="signingOut || channels.loading"
                     @click="logout"
@@ -193,6 +229,25 @@ onMounted(() => channels.initialize())
             role="alert"
             ><span>{{ channels.error || error }}</span
             ><q-btn flat dense label="Retry" @click="retry" /></div
+          ><div
+            v-if="auth.user?.status === 'offline'"
+            class="offline-banner"
+            role="status"
+            ><q-icon name="cloud_off" size="16px" /><span
+              >You are offline. Incoming messages are paused<template
+                v-if="pending"
+              >
+                ({{ pending }} update{{
+                  pending === 1 ? '' : 's'
+                }}
+                waiting)</template
+              >.</span
+            ><q-btn
+              flat
+              dense
+              no-caps
+              label="Go online"
+              @click="changeStatus('online')" /></div
           ><router-view v-slot="{ Component }"
             ><component
               :is="Component"
@@ -367,6 +422,20 @@ onMounted(() => channels.initialize())
   background: #fffefa;
   display: flex;
   flex-direction: column;
+}
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eef0f3;
+  color: #4e5563;
+  border-radius: 6px;
+  margin: 12px 26px 0;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.offline-banner span {
+  flex: 1;
 }
 .workspace-error {
   padding: 9px 20px;

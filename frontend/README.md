@@ -81,6 +81,13 @@ Provisional rules, pending instructor confirmation of the first/second kick beha
 - Demo data: alex's `/kick james` in `#general` is the third vote, and alex is banned from `#feedback`.
 - Two tabs signed in as different users share data through the `storage` event, so a kicked user's tab shows a lost-access notice.
 
+## User status
+
+- The profile menu sets **Online**, **Do not disturb**, or **Offline**. Status is stored on the user, so member lists (and other tabs) show it.
+- Other people's activity reaches the tab through `useLiveUpdates`: another tab's change (`storage` event) or the channel menu's **Demo: receive a message from a teammate**.
+- Offline pauses delivery: messages are still stored, a banner counts waiting updates, and sending is blocked. Going online refreshes channels and fetches missed messages with `messageHistory(id, { after })`.
+- DND currently only changes the badge; it suppresses notifications once those exist (next step).
+
 ## Verification
 
 Run from `frontend/`:

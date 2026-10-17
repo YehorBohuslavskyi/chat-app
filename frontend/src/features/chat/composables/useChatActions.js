@@ -53,6 +53,9 @@ export function useChatActions({ onMembers, onHelp }) {
     feedback.value = ''
     try {
       const parsed = parseCommand(body)
+      // Offline users cannot send; throwing skips clear(), so the draft is kept.
+      if (parsed.type === 'message' && auth.user?.status === 'offline')
+        throw new Error('You are offline. Go online to send messages.')
       if (parsed.type === 'message') await messages.send(channelId, parsed.body)
       else {
         switch (parsed.name) {
