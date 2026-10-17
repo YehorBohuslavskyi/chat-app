@@ -30,8 +30,7 @@ defineEmits(['invite', 'close'])
           >@{{ member.nickName }} ·
           {{ member.status === 'dnd' ? 'Do not disturb' : member.status }}</span
         ></div
-      >
-      ><span v-if="kickVotes[member.id]?.length" class="kick-votes"
+        ><span v-if="kickVotes[member.id]?.length" class="kick-votes"
         >{{ kickVotes[member.id].length }}/{{ kickThreshold
         }}<q-tooltip>Kick votes toward a permanent ban</q-tooltip></span
       >
