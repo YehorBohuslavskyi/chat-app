@@ -8,6 +8,8 @@ import { useChatActions } from '../features/chat/composables/useChatActions.js'
 import ChatHeader from '../features/chat/components/ChatHeader.vue'
 import MessageList from '../features/chat/components/MessageList.vue'
 import MessageComposer from '../features/chat/components/MessageComposer.vue'
+import TypingIndicator from '../features/chat/components/TypingIndicator.vue'
+import { useTypingStore } from '../features/chat/typing.store.js'
 import ChannelMembers from '../features/channels/components/ChannelMembers.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -18,6 +20,7 @@ const emit = defineEmits(['open-channel-dialog'])
 const auth = useAuthStore()
 const channels = useChannelsStore()
 const messages = useMessagesStore()
+const typing = useTypingStore()
 const quasar = useQuasar()
 const membersOpen = ref(quasar.screen.width >= 1250)
 const helpOpen = ref(false)
@@ -55,6 +58,15 @@ async function simulateIncoming(options = {}) {
     feedback.value = cause.message
   }
 }
+// Demo control for live drafts; errors appear like command feedback.
+async function simulateTyping() {
+  try {
+    const { nickName } = await typing.simulateTyping(channels.activeId)
+    feedback.value = `@${nickName} started typing. Click their name above the message box to watch the draft.`
+  } catch (cause) {
+    feedback.value = cause.message
+  }
+}
 const canInvite = computed(
   () =>
     channels.active?.type === 'public' ||
@@ -81,6 +93,7 @@ const canInvite = computed(
         @invite="emit('open-channel-dialog', 'invite')"
         @leave="askLeave()"
         @simulate-incoming="simulateIncoming"
+        @simulate-typing="simulateTyping()"
         @help="helpOpen = true" /><div class="conversation-body"
         ><div class="conversation-column"
           ><MessageList
@@ -102,7 +115,9 @@ const canInvite = computed(
               size="sm"
               aria-label="Dismiss feedback"
               @click="feedback = ''" /></div
-          ><MessageComposer
+          ><TypingIndicator
+            :key="channels.activeId"
+            :channel="channels.active" /><MessageComposer
             :key="channels.activeId"
             :channel="channels.active"
             :members="channels.members"

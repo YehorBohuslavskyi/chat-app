@@ -3,6 +3,8 @@ import { createFixtures, demoCredentials } from './fixtures.js'
 // v2: channels gained bannedIds and kickVotes, so older saved data is not reused.
 const key = 'loop-prototype-v2'
 const sessionKey = 'loop-session-v1'
+// Unsent drafts are live-only, so they live apart from the workspace data.
+const draftKey = 'loop-drafts-v1'
 const copy = value => JSON.parse(JSON.stringify(value))
 const normalize = value =>
   String(value || '')
@@ -14,6 +16,22 @@ export const kickThreshold = 3
 export const statuses = ['online', 'dnd', 'offline']
 export const notificationModes = ['all', 'mentions']
 // Sample lines for the "receive a message" demo control.
+// "Demo: a teammate types" scripts: type `first`, backspace `erase` characters,
+// then type `rest`. The result is sent as a message.
+const typingScripts = [
+  { first: 'I can take the relaese', erase: 7, rest: 'release notes tonight.' },
+  {
+    first: 'Does anyone know why the build is sloe',
+    erase: 4,
+    rest: 'slow today?'
+  },
+  {
+    first: 'Let us meet on Thursdya',
+    erase: 8,
+    rest: 'Thursday at 10 to plan the demo.'
+  }
+]
+const typingStepMs = 110
 const incomingLines = [
   'Quick update: the latest build is ready to try.',
   'Has anyone had a chance to look at this yet?',
@@ -28,7 +46,35 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
   let userId = null
   const listeners = new Set()
   // Tells subscribers that shared data changed (another tab, or a simulated teammate).
-  const notify = () => listeners.forEach(listener => listener())
+  // `kind` is 'data' (messages, channels, users) or 'drafts' (live typing).
+  const notify = (kind = 'data') =>
+    listeners.forEach(listener => listener(kind))
+  // { [channelId]: { [userId]: { text, updatedAt } } }
+  let drafts = {}
+  try {
+    drafts = JSON.parse(storage?.getItem(draftKey) || '{}')
+  } catch {
+    drafts = {}
+  }
+  const saveDrafts = () => {
+    try {
+      storage?.setItem(draftKey, JSON.stringify(drafts))
+    } catch {
+      /* Drafts still work in this tab without storage. */
+    }
+  }
+  const writeDraft = (channelId, authorId, text) => {
+    drafts[channelId] ||= {}
+    if (text.trim())
+      drafts[channelId][authorId] = {
+        text,
+        updatedAt: new Date().toISOString()
+      }
+    else delete drafts[channelId][authorId]
+    saveDrafts()
+  }
+  // Senders currently "typing" in a demo, as `${channelId}:${userId}`.
+  const typingNow = new Set()
   try {
     const saved = storage?.getItem(key)
     if (saved) data = JSON.parse(saved)
@@ -46,13 +92,22 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
   // Another tab (signed in as someone else) saved a change: reload it so this tab
   // sees kicks, bans, and new channels. Lets two tabs act as two users.
   globalThis.addEventListener?.('storage', event => {
+    if (event.key === draftKey) {
+      try {
+        drafts = JSON.parse(event.newValue || '{}')
+      } catch {
+        return
+      }
+      notify('drafts')
+      return
+    }
     if (event.key !== key || !event.newValue) return
     try {
       data = JSON.parse(event.newValue)
     } catch {
       return
     }
-    notify()
+    notify('data')
   })
   const currentUser = () => data.users.find(user => user.id === userId) || null
   const requireUser = () => {
@@ -214,6 +269,8 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
       }),
     logout: () =>
       run(() => {
+        // Signing out abandons every unsent draft of this user.
+        if (userId) for (const id in drafts) writeDraft(id, userId, '')
         setSession(null)
         return null
       }),
@@ -455,8 +512,100 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         })
         save()
         // After this request resolves, like a server push arriving a moment later.
-        setTimeout(notify)
+        setTimeout(() => notify('data'))
         return { channelId: id }
+      }),
+    // Other members' unsent text in the channel (never the caller's own).
+    drafts: id =>
+      run(() => {
+        const channel = channelFor(id)
+        return Object.entries(drafts[id] || {})
+          .filter(
+            ([authorId, draft]) =>
+              authorId !== userId &&
+              draft.text &&
+              channel.memberIds.includes(authorId)
+          )
+          .map(([authorId, draft]) => ({
+            user: data.users.find(user => user.id === authorId),
+            text: draft.text,
+            updatedAt: draft.updatedAt
+          }))
+          .filter(draft => draft.user)
+      }),
+    // The caller's draft; empty text clears it ("stopped typing").
+    setDraft: (id, text) =>
+      run(() => {
+        channelFor(id)
+        writeDraft(id, userId, String(text ?? '').slice(0, 4000))
+        return null
+      }),
+    // Demo control: a teammate types (with a typo they fix), pauses, and sends.
+    // Every keystroke updates their draft and notifies like a server push.
+    simulateTyping: id =>
+      run(() => {
+        const channel = channelFor(id)
+        const senders = channel.memberIds.filter(
+          item => item !== userId && !typingNow.has(`${id}:${item}`)
+        )
+        if (!senders.length)
+          throw new Error(
+            channel.memberIds.length > 1
+              ? 'Everyone else here is already typing.'
+              : 'Nobody else is in this channel yet. Invite someone first.'
+          )
+        const senderId = senders[Math.floor(Math.random() * senders.length)]
+        const script =
+          typingScripts[Math.floor(Math.random() * typingScripts.length)]
+        const kept = script.first.slice(0, -script.erase)
+        const frames = [
+          ...Array.from(script.first, (_, index) =>
+            script.first.slice(0, index + 1)
+          ),
+          ...Array.from({ length: script.erase }, (_, index) =>
+            script.first.slice(0, script.first.length - index - 1)
+          ),
+          ...Array.from(
+            script.rest,
+            (_, index) => kept + script.rest.slice(0, index + 1)
+          )
+        ]
+        const slot = `${id}:${senderId}`
+        typingNow.add(slot)
+        const finish = () => {
+          typingNow.delete(slot)
+          writeDraft(id, senderId, '')
+          notify('drafts')
+        }
+        // Stop if the channel or the sender's membership disappears meanwhile.
+        const stillThere = () =>
+          data.channels
+            .find(item => item.id === id)
+            ?.memberIds.includes(senderId)
+        let step = 0
+        const tick = () => {
+          if (!stillThere()) return finish()
+          if (step < frames.length) {
+            writeDraft(id, senderId, frames[step++])
+            notify('drafts')
+            setTimeout(tick, typingStepMs)
+            return
+          }
+          data.messages.push({
+            id: ++data.sequence,
+            channelId: id,
+            senderId,
+            body: frames.at(-1),
+            createdAt: new Date().toISOString()
+          })
+          save()
+          finish()
+          notify('data')
+        }
+        setTimeout(tick, typingStepMs)
+        return {
+          nickName: data.users.find(user => user.id === senderId).nickName
+        }
       }),
     sendMessage: (id, body) =>
       run(() => {
@@ -473,6 +622,8 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         }
         data.messages.push(message)
         save()
+        // Sending finishes the draft, even if the client never cleared it.
+        writeDraft(id, userId, '')
         return { ...message, sender: currentUser() }
       })
   }

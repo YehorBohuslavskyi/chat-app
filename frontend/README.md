@@ -95,6 +95,13 @@ Provisional rules, pending instructor confirmation of the first/second kick beha
 - A notification is shown only when the app is hidden (Quasar `AppVisibility`), the user is not in Do not disturb, and the mode allows it. It contains the sender's name, the channel, and a message excerpt; clicking it focuses the app and opens the channel. More than 3 at once become one summary.
 - Demo: channel menu → **Demo: a message / a mention in 5 seconds**, then switch to another tab.
 
+## Typing and live drafts
+
+- The composer publishes the user's unsent text to the channel (at most every 250 ms; clearing is immediate). Sending, emptying the box, switching channels, going offline, or signing out clears it. Slash commands are never published.
+- Above the composer, a typing line names everyone drafting in the open channel. Each nickname is a button that opens a live preview of their unsent text, updated as they type and delete; it says when they finished (sent or deleted).
+- Drafts are stored apart from workspace data (`loop-drafts-v1`) and announced as a `'drafts'` change, which refreshes only drafts rather than running a full sync. Drafts untouched for 30 seconds count as abandoned. Offline users neither receive nor publish drafts.
+- Demo: channel menu → **Demo: a teammate types a message** (a typo is typed, deleted, retyped, then sent). Two tabs signed in as different users also show each other's typing.
+
 ## Verification
 
 Run from `frontend/`:

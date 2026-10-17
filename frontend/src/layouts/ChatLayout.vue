@@ -6,6 +6,7 @@ import { useAuthStore } from '../features/auth/auth.store.js'
 import { useChannelsStore } from '../features/channels/channels.store.js'
 import { useMessagesStore } from '../features/chat/messages.store.js'
 import { useLiveUpdates } from '../features/chat/composables/useLiveUpdates.js'
+import { useTypingStore } from '../features/chat/typing.store.js'
 import ChannelList from '../features/channels/components/ChannelList.vue'
 import ChannelDialog from '../features/channels/components/ChannelDialog.vue'
 import UserAvatar from '../components/UserAvatar.vue'
@@ -15,6 +16,7 @@ import NotificationSettings from '../features/notifications/components/Notificat
 const auth = useAuthStore()
 const channels = useChannelsStore()
 const messages = useMessagesStore()
+const typing = useTypingStore()
 const router = useRouter()
 const quasar = useQuasar()
 const drawer = ref(false)
@@ -64,6 +66,7 @@ async function logout() {
     await auth.logout()
     channels.reset()
     messages.reset()
+    typing.reset()
     await router.replace({ name: 'login' })
   } catch (cause) {
     error.value = cause.message
