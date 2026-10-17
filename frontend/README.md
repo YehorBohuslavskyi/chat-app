@@ -86,7 +86,14 @@ Provisional rules, pending instructor confirmation of the first/second kick beha
 - The profile menu sets **Online**, **Do not disturb**, or **Offline**. Status is stored on the user, so member lists (and other tabs) show it.
 - Other people's activity reaches the tab through `useLiveUpdates`: another tab's change (`storage` event) or the channel menu's **Demo: receive a message from a teammate**.
 - Offline pauses delivery: messages are still stored, a banner counts waiting updates, and sending is blocked. Going online refreshes channels and fetches missed messages with `messageHistory(id, { after })`.
-- DND currently only changes the badge; it suppresses notifications once those exist (next step).
+- DND mutes notifications (see below).
+
+## Notifications
+
+- Profile menu → **Notifications**: choose all messages or mentions only (saved on the user), and allow browser notifications. Granted, not-yet-asked, blocked, and unsupported permission states each have their own message.
+- After each live-update sync, `workspaceService.incoming(cursor)` returns other people's new messages in all of the user's channels (ids are one global sequence). Messages from before sign-in never notify.
+- A notification is shown only when the app is hidden (Quasar `AppVisibility`), the user is not in Do not disturb, and the mode allows it. It contains the sender's name, the channel, and a message excerpt; clicking it focuses the app and opens the channel. More than 3 at once become one summary.
+- Demo: channel menu → **Demo: a message / a mention in 5 seconds**, then switch to another tab.
 
 ## Verification
 

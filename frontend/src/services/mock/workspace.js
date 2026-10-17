@@ -12,6 +12,7 @@ const validName = /^[a-z0-9][a-z0-9_-]{1,31}$/
 // Distinct member votes needed to ban someone from a public channel.
 export const kickThreshold = 3
 export const statuses = ['online', 'dnd', 'offline']
+export const notificationModes = ['all', 'mentions']
 // Sample lines for the "receive a message" demo control.
 const incomingLines = [
   'Quick update: the latest build is ready to try.',
@@ -395,9 +396,47 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         save()
         return user
       }),
+    setNotificationMode: mode =>
+      run(() => {
+        const user = requireUser()
+        if (!notificationModes.includes(mode))
+          throw new Error('Choose all messages or mentions only.')
+        user.notifications = mode
+        save()
+        return user
+      }),
+    // Messages from other people in the user's channels with an id above `after`.
+    // Ids are one global sequence, so `cursor` (the newest id) covers every channel.
+    // `after = null` returns only the cursor: a baseline that never notifies.
+    incoming: (after = null) =>
+      run(() => {
+        const user = requireUser()
+        const mine = new Map(
+          data.channels
+            .filter(channel => channel.memberIds.includes(user.id))
+            .map(channel => [channel.id, channel.name])
+        )
+        const items =
+          after === null
+            ? []
+            : data.messages.filter(
+                message =>
+                  message.id > after &&
+                  message.senderId !== user.id &&
+                  mine.has(message.channelId)
+              )
+        return {
+          items: items.map(message => ({
+            ...message,
+            channelName: mine.get(message.channelId),
+            sender: data.users.find(item => item.id === message.senderId)
+          })),
+          cursor: data.sequence
+        }
+      }),
     // Demo control: a random other member posts in the channel. The message is
     // stored like any other; delivery to this tab goes through notify().
-    simulateIncoming: id =>
+    simulateIncoming: (id, { mention = false } = {}) =>
       run(() => {
         const channel = channelFor(id)
         const senders = channel.memberIds.filter(item => item !== userId)
@@ -409,7 +448,9 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           id: ++data.sequence,
           channelId: id,
           senderId: senders[Math.floor(Math.random() * senders.length)],
-          body: incomingLines[Math.floor(Math.random() * incomingLines.length)],
+          body:
+            (mention ? `@${currentUser().nickName} ` : '') +
+            incomingLines[Math.floor(Math.random() * incomingLines.length)],
           createdAt: new Date().toISOString()
         })
         save()

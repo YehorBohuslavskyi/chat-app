@@ -10,6 +10,7 @@ import ChannelList from '../features/channels/components/ChannelList.vue'
 import ChannelDialog from '../features/channels/components/ChannelDialog.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import BrandMark from '../components/BrandMark.vue'
+import NotificationSettings from '../features/notifications/components/NotificationSettings.vue'
 
 const auth = useAuthStore()
 const channels = useChannelsStore()
@@ -23,6 +24,7 @@ const dialogChannelId = ref(null)
 const error = ref('')
 const signingOut = ref(false)
 const { pending } = useLiveUpdates()
+const settingsOpen = ref(false)
 const statusOptions = [
   { value: 'online', label: 'Online', color: '#38a57e' },
   { value: 'dnd', label: 'Do not disturb', color: '#d96d75' },
@@ -209,6 +211,13 @@ onMounted(() => channels.initialize())
                         size="18px" /></q-item-section></q-item
                   ><q-separator /><q-item
                     clickable
+                    v-close-popup
+                    @click="settingsOpen = true"
+                    ><q-item-section avatar
+                      ><q-icon name="notifications_none" /></q-item-section
+                    ><q-item-section>Notifications</q-item-section></q-item
+                  ><q-item
+                    clickable
                     :disable="signingOut || channels.loading"
                     @click="logout"
                     ><q-item-section avatar
@@ -254,6 +263,7 @@ onMounted(() => channels.initialize())
               @open-channel-dialog="openDialog" /></router-view></div
       ></q-page-container>
     </q-layout>
+    <NotificationSettings v-model="settingsOpen" />
     <ChannelDialog
       v-model="dialogOpen"
       :mode="dialogMode"

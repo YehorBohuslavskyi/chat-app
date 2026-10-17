@@ -95,8 +95,10 @@ export const useMessagesStore = defineStore('messages', () => {
     await Promise.all(ids.map(catchUp))
   }
   // Demo control; the message arrives through useLiveUpdates like real activity.
-  async function simulateIncoming(id) {
-    await workspaceService.simulateIncoming(id)
+  // `delay` (ms) leaves time to switch tabs so a notification can appear.
+  async function simulateIncoming(id, { delay = 0, mention = false } = {}) {
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay))
+    await workspaceService.simulateIncoming(id, { mention })
   }
   async function send(id, body) {
     const current = guard(id)

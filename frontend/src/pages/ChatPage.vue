@@ -45,9 +45,12 @@ const {
   }
 })
 // Demo control for incoming activity; errors appear like command feedback.
-async function simulateIncoming() {
+async function simulateIncoming(options = {}) {
+  if (options.delay)
+    feedback.value =
+      'A teammate will post in 5 seconds. Switch to another browser tab (or minimize the window) to get a notification.'
   try {
-    await messages.simulateIncoming(channels.activeId)
+    await messages.simulateIncoming(channels.activeId, options)
   } catch (cause) {
     feedback.value = cause.message
   }
@@ -77,7 +80,7 @@ const canInvite = computed(
         @members="membersOpen = !membersOpen"
         @invite="emit('open-channel-dialog', 'invite')"
         @leave="askLeave()"
-        @simulate-incoming="simulateIncoming()"
+        @simulate-incoming="simulateIncoming"
         @help="helpOpen = true" /><div class="conversation-body"
         ><div class="conversation-column"
           ><MessageList

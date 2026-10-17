@@ -43,6 +43,25 @@ defineEmits(['members', 'invite', 'leave', 'help', 'simulate-incoming'])
               ><q-item-section
                 >Demo: receive a message from a teammate</q-item-section
               ></q-item
+            ><q-item
+              clickable
+              v-close-popup
+              @click="$emit('simulate-incoming', { delay: 5000 })"
+              ><q-item-section avatar><q-icon name="schedule" /></q-item-section
+              ><q-item-section
+                >Demo: a message in 5 seconds</q-item-section
+              ></q-item
+            ><q-item
+              clickable
+              v-close-popup
+              @click="
+                $emit('simulate-incoming', { delay: 5000, mention: true })
+              "
+              ><q-item-section avatar
+                ><q-icon name="alternate_email" /></q-item-section
+              ><q-item-section
+                >Demo: a mention in 5 seconds</q-item-section
+              ></q-item
             ><q-separator /><q-item
               clickable
               v-close-popup

@@ -14,9 +14,12 @@ export const useAuthStore = defineStore('auth', () => {
   async function setStatus(status) {
     user.value = await workspaceService.setStatus(status)
   }
+  async function setNotificationMode(mode) {
+    user.value = await workspaceService.setNotificationMode(mode)
+  }
   async function logout() {
     await workspaceService.logout()
     user.value = null
   }
-  return { user, login, register, setStatus, logout }
+  return { user, login, register, setStatus, setNotificationMode, logout }
 })
