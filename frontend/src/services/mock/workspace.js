@@ -241,19 +241,23 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         const channel = channelFor(id)
         return data.users.filter(user => channel.memberIds.includes(user.id))
       }),
-    // 60% milestone: recent messages only. Full history is the teammate's next feature.
-    recentMessages: id =>
+    // Cursor pagination: `before` is the oldest message id the client already has.
+    // Ids come from one increasing sequence, so they give a stable, gap-free order.
+    messageHistory: (id, { before = null, limit = 20 } = {}) =>
       run(() => {
         channelFor(id)
+        limit = Math.min(Math.max(Number(limit) || 20, 1), 50)
         const messages = data.messages.filter(
-          message => message.channelId === id
+          message =>
+            message.channelId === id && (before === null || message.id < before)
         )
-        const items = messages.slice(-20)
+        const items = messages.slice(-limit)
         return {
           items: items.map(message => ({
             ...message,
             sender: data.users.find(user => user.id === message.senderId)
-          }))
+          })),
+          hasMore: messages.length > items.length
         }
       }),
     sendMessage: (id, body) =>

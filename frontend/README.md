@@ -24,7 +24,7 @@ The milestone has been reduced from approximately 70% to 60% by removing the com
 | Accounts                 | Login, registration, validation, unique normalized nickname/email, route guard, logout and state clearing                                                              |
 | Channels                 | Browse/join public channels; create public/private channels; leave; administrator deletion confirmation                                                                |
 | Invitations and commands | Immediate invitations, unseen invitation highlight/top placement, `/join`, `/invite`, `/list`, `/cancel`, `/quit`, `/help`, syntax and permission feedback             |
-| Messaging                | Latest 20 messages per channel plus new sends, Enter/send button, Shift+Enter, exact member mentions, recipient highlighting, mention suggestions, safe text rendering |
+| Messaging                | Full channel history (20-message pages loaded on upward scroll) plus new sends, Enter/send button, Shift+Enter, exact member mentions, recipient highlighting, mention suggestions, safe text rendering |
 | Members and UI states    | Member identities, administrator marker, sample presence badges, loading/empty/error/retry states, keyboard labels and focus styles                                    |
 
 ### Remaining scope — intentionally not implemented
@@ -41,7 +41,7 @@ This is a proposed ownership boundary to agree together. The implementation was 
 
 Start with these files:
 
-- `src/services/mock/workspace.js`: currently exposes `recentMessages(channelId)` returning `Promise<{ items }>`, limited to 20 messages. Add a member-authorized history API with a stable cursor, bounded page sizes, and an end-of-history signal. Agree the real API contract with the backend teammate.
+- `src/services/mock/workspace.js`: exposes `messageHistory(channelId, { before, limit })` returning `Promise<{ items, hasMore }>`. `before` is the oldest loaded message id (cursor), `limit` is clamped to 1–50, and only members may read. Agree the real API contract with the backend teammate.
 - `src/features/chat/messages.store.js`: add pagination state, older-page actions, concurrent-request handling, page merging, and retry behavior. Preserve session/channel invalidation guards and send deduplication.
 - `src/features/chat/components/MessageList.vue`: implement upward infinite scrolling, an accessible manual fallback, and scroll-position preservation when prepending older messages.
 - `src/features/chat/components/ChatHeader.vue` and `src/pages/ChatPage.vue`: add search controls and query state. Define whether search covers loaded messages or all history, and label it accurately.
@@ -67,7 +67,7 @@ History is assignment UC7. Message search is an additional frontend feature, not
 - Names are case-insensitive, normalized to lowercase, and use 2–32 letters, numbers, hyphens, or underscores. A nickname/channel name must begin with a letter or number.
 - Invitations provisionally add membership immediately; opening the channel clears its unseen marker. This follows the proposed default in the project plan and still needs instructor/team confirmation for the final implementation.
 - An administrator leaving deletes the channel and its messages; both UI actions and commands use the same confirmation and store operation. An ordinary member leaving loses access and cached messages. Private re-entry requires another invitation.
-- Mentions recognize complete member nicknames, ignore email substrings and unknown nicknames, and allow multiple recipients. Drafts clear when switching channels. Only the most recent 20 messages are fetched when a channel is first opened; new messages sent in the current session are appended. Older messages remain stored but cannot yet be retrieved through the frontend service. Message search is not implemented at this milestone.
+- Mentions recognize complete member nicknames, ignore email substrings and unknown nicknames, and allow multiple recipients. Drafts clear when switching channels. Opening a channel fetches the latest 20 messages; scrolling near the top (or the keyboard-accessible **Load older messages** button) fetches the previous 20 by id cursor, preserving the reading position. Pages merge by id, so overlaps and concurrent sends cannot duplicate messages. A fixed-height bar shows loading, retry, and "The beginning of #channel" states. Message search is not implemented at this milestone.
 
 ## Verification
 
@@ -86,7 +86,7 @@ The earlier 70% version passed 14 behavior checks before its test files were rem
 
 1. Enter the demo, switch channels, and open `launch-room` to clear its invitation badge.
 2. Send a message and an `@alex` mention; test Shift+Enter and an invalid slash command.
-3. Open `general` and confirm that only the latest 20 stored messages load, a new message appends, and there is no older-history or message-search control.
+3. Open `general` and scroll up through all 50 stored messages to "The beginning of #general"; confirm the position holds as each page loads and a new message still appends.
 4. Create a private channel, invite `mia`, and inspect `/list`.
 5. Try `/quit` in `general` to see the permission error; use `/cancel` in your own channel and inspect the deletion confirmation.
 6. Leave a public channel and rejoin it through Browse channels. Sign out, register a sample account, and sign back in to verify isolation.
