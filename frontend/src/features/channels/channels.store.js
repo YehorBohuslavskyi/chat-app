@@ -12,9 +12,19 @@ export const useChannelsStore = defineStore('channels', () => {
   const active = computed(() =>
     channels.value.find(channel => channel.id === activeId.value)
   )
+  // Shown when the open channel disappears without the user leaving it (kick, ban, revoke).
+  const notice = ref('')
   let selection = 0
   async function refresh() {
+    const previous = active.value
     channels.value = await workspaceService.listChannels()
+    if (
+      previous &&
+      !channels.value.some(channel => channel.id === previous.id)
+    ) {
+      useMessagesStore().forget(previous.id)
+      notice.value = `You no longer have access to #${previous.name}. You were removed, or the channel was deleted.`
+    }
     if (!channels.value.some(channel => channel.id === activeId.value))
       activeId.value =
         channels.value.find(channel => channel.id === 'general')?.id ||
@@ -58,6 +68,8 @@ export const useChannelsStore = defineStore('channels', () => {
   async function leave(id, deleteOnly) {
     await workspaceService.leaveChannel(id, deleteOnly)
     useMessagesStore().forget(id)
+    // Leaving on purpose is not a lost-access event, so clear the selection first.
+    if (activeId.value === id) activeId.value = null
     await refresh()
     await select(activeId.value)
   }
@@ -66,12 +78,36 @@ export const useChannelsStore = defineStore('channels', () => {
     await refresh()
     if (activeId.value === id) await select(id)
   }
+  // Both return the service result so the caller can describe what happened.
+  async function kick(id, nickname) {
+    const result = await workspaceService.kick(id, nickname)
+    await refresh()
+    if (activeId.value === id) await select(id)
+    return result
+  }
+  async function revoke(id, nickname) {
+    const result = await workspaceService.revoke(id, nickname)
+    await refresh()
+    if (activeId.value === id) await select(id)
+    return result
+  }
+  // Another tab changed shared data: re-read channels and members while signed in.
+  workspaceService.onExternalChange(async () => {
+    if (!channels.value.length && !activeId.value) return
+    try {
+      await refresh()
+      await select(activeId.value)
+    } catch (cause) {
+      error.value = cause.message
+    }
+  })
   function reset() {
     selection++
     channels.value = []
     activeId.value = null
     members.value = []
     error.value = ''
+    notice.value = ''
   }
   return {
     channels,
@@ -80,12 +116,15 @@ export const useChannelsStore = defineStore('channels', () => {
     members,
     loading,
     error,
+    notice,
     initialize,
     select,
     create,
     join,
     leave,
     invite,
+    kick,
+    revoke,
     reset
   }
 })

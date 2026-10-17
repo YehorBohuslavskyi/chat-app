@@ -29,7 +29,8 @@ The milestone has been reduced from approximately 70% to 60% by removing the com
 
 ### Remaining scope — intentionally not implemented
 
-- Advanced moderation: `/kick`, `/revoke`, distinct kick votes, bans, administrator restoration, and the inactive-channel expiration scenario. Resolve the assignment's kick-vote ambiguities first.
+- Inactive-channel expiration scenario.
+- Moderation (`/kick`, `/revoke`, distinct kick votes, bans, administrator restoration) is in progress; see *Moderation* below.
 - Live behavior: typing, clickable live draft previews, status controls, notification preferences and Quasar App Visibility, offline delivery suspension and catch-up. Presence badges currently display sample data only.
 - Integration and finalization: agreed API/event contracts, real authentication and authorization, real-time transport, cross-tab synchronization, PWA install/service worker, full desktop/mobile acceptance walkthrough and screenshots.
 
@@ -62,12 +63,23 @@ History is assignment UC7. Message search is an additional frontend feature, not
 - `layouts/` contains the page shells; `pages/` composes feature components.
 - `features/auth`, `features/channels`, and `features/chat` own their Pinia state. Command execution lives in `useChatActions`; parsing and mention tokenization are pure utilities.
 - `services/index.js` selects the asynchronous mock adapter. UI components do not make HTTP calls. Replace this adapter with real service implementations when the backend contract is agreed; the existing Axios boot file remains available for integration.
-- Mock data persists in `localStorage` under `loop-prototype-v1`; the signed-in identity is tab-local `sessionStorage` under `loop-session-v1`. If storage is unavailable, the prototype runs in memory. Logout clears identity and Pinia caches, while sample workspace data remains available for subsequent sign-in. Clear these two keys to reset the demo.
+- Mock data persists in `localStorage` under `loop-prototype-v2`; the signed-in identity is tab-local `sessionStorage` under `loop-session-v1`. If storage is unavailable, the prototype runs in memory. Logout clears identity and Pinia caches, while sample workspace data remains available for subsequent sign-in. Clear these two keys to reset the demo.
 - This is a single-tab local simulation, not a secure authentication system or synchronized multi-user app. Registered sample passwords are stored as mock digests, never plaintext; do not use real credentials. Server authorization is still required.
 - Names are case-insensitive, normalized to lowercase, and use 2–32 letters, numbers, hyphens, or underscores. A nickname/channel name must begin with a letter or number.
 - Invitations provisionally add membership immediately; opening the channel clears its unseen marker. This follows the proposed default in the project plan and still needs instructor/team confirmation for the final implementation.
 - An administrator leaving deletes the channel and its messages; both UI actions and commands use the same confirmation and store operation. An ordinary member leaving loses access and cached messages. Private re-entry requires another invitation.
 - Mentions recognize complete member nicknames, ignore email substrings and unknown nicknames, and allow multiple recipients. Drafts clear when switching channels. Opening a channel fetches the latest 20 messages; scrolling near the top (or the keyboard-accessible **Load older messages** button) fetches the previous 20 by id cursor, preserving the reading position. Pages merge by id, so overlaps and concurrent sends cannot duplicate messages. A fixed-height bar shows loading, retry, and "The beginning of #channel" states. Message search is not implemented at this milestone.
+
+## Moderation
+
+Provisional rules, pending instructor confirmation of the first/second kick behavior and vote lifetime:
+
+- `/kick nickname` (public channels): the administrator bans immediately; any other member adds one vote. 3 distinct members' votes ban permanently. Repeat votes are rejected, votes never expire, and the target stays a member until banned.
+- `/revoke nickname` (private channels, administrator only): removes the member without a ban; a new invitation restores access.
+- Banned users cannot `/join`. Only the administrator can `/invite` them, which lifts the ban.
+- Nobody can kick or revoke themselves or the administrator.
+- Demo data: alex's `/kick james` in `#general` is the third vote, and alex is banned from `#feedback`.
+- Two tabs signed in as different users share data through the `storage` event, so a kicked user's tab shows a lost-access notice.
 
 ## Verification
 

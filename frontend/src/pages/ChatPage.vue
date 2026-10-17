@@ -11,6 +11,7 @@ import ChannelMembers from '../features/channels/components/ChannelMembers.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { commandHelp } from '../features/chat/utils/parseCommand.js'
+import { kickThreshold } from '../services/index.js'
 
 const emit = defineEmits(['open-channel-dialog'])
 const auth = useAuthStore()
@@ -49,6 +50,16 @@ const canInvite = computed(
 </script>
 <template>
   <section class="chat-page" aria-label="Chat workspace"
+    ><div v-if="channels.notice" class="access-notice" role="alert"
+      ><q-icon name="block" size="16px" /><span>{{ channels.notice }}</span
+      ><q-btn
+        flat
+        dense
+        round
+        icon="close"
+        size="sm"
+        aria-label="Dismiss notice"
+        @click="channels.notice = ''" /></div
     ><template v-if="channels.active"
       ><ChatHeader
         :channel="channels.active"
@@ -87,6 +98,8 @@ const canInvite = computed(
           v-if="membersOpen && quasar.screen.width >= 1250"
           :members="channels.members"
           :admin-id="channels.active.adminId"
+          :kick-votes="channels.active.kickVotes"
+          :kick-threshold="kickThreshold"
           :can-invite="canInvite"
           @close="membersOpen = false"
           @invite="emit('open-channel-dialog', 'invite')" /></div
@@ -96,6 +109,8 @@ const canInvite = computed(
         ><ChannelMembers
           :members="channels.members"
           :admin-id="channels.active.adminId"
+          :kick-votes="channels.active.kickVotes"
+          :kick-threshold="kickThreshold"
           :can-invite="canInvite"
           @close="membersOpen = false"
           @invite="inviteFromMembers" /></q-dialog></template
@@ -160,7 +175,11 @@ const canInvite = computed(
               {
                 '/join channel-name [private]':
                   'Join a channel, or create it if it does not exist.',
-                '/invite nickname': 'Add a teammate to the active channel.',
+                '/invite nickname':
+                  'Add a teammate to the active channel. Administrators can also restore a banned member.',
+                '/kick nickname': `Public channels: vote to remove someone. ${kickThreshold} different members, or the administrator alone, ban them permanently.`,
+                '/revoke nickname':
+                  'Private channels: the administrator removes a member. A new invitation restores access.',
                 '/list': 'Show the people in this channel.',
                 '/cancel':
                   'Leave the channel. Administrators delete it for everyone.',
@@ -168,9 +187,6 @@ const canInvite = computed(
                 '/help': 'Open this guide.'
               }[command]
             }}</span></div
-          ><p class="text-muted q-mt-lg"
-            >Advanced /kick and /revoke moderation is reserved for the next
-            milestone.</p
           ></q-card-section
         ></q-card
       ></q-dialog
@@ -207,6 +223,18 @@ const canInvite = computed(
   color: #3152aa;
   font-size: 12px;
 }
+.access-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fbecee;
+  color: #ae5364;
+  border-radius: 6px;
+  margin: 12px 26px 0;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.access-notice span,
 .command-feedback span {
   flex: 1;
 }

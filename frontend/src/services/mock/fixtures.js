@@ -109,6 +109,17 @@ export function createFixtures() {
       invitedIds: []
     }
   ]
+  // Moderation demo data: alex's /kick on james in #general is the third vote,
+  // and alex is banned from #feedback, so /join feedback shows the banned state.
+  for (const channel of channels) {
+    channel.bannedIds = []
+    channel.kickVotes = {}
+  }
+  channels.find(channel => channel.id === 'general').kickVotes.james = [
+    'noah',
+    'sofia'
+  ]
+  channels.find(channel => channel.id === 'feedback').bannedIds.push('alex')
   const conversation = [
     [
       'mia',

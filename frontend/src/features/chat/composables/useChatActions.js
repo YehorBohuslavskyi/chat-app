@@ -64,6 +64,21 @@ export function useChatActions({ onMembers, onHelp }) {
             if (channels.activeId === channelId)
               feedback.value = `Invited @${parsed.args[0].replace(/^@/, '')} to the channel.`
             break
+          case 'kick': {
+            const result = await channels.kick(channelId, parsed.args[0])
+            if (channels.activeId === channelId)
+              feedback.value =
+                result.outcome === 'banned'
+                  ? `@${result.nickName} is now banned from this channel.`
+                  : `Your vote to kick @${result.nickName} was counted (${result.votes}/${result.needed}).`
+            break
+          }
+          case 'revoke': {
+            const result = await channels.revoke(channelId, parsed.args[0])
+            if (channels.activeId === channelId)
+              feedback.value = `Removed @${result.nickName} from this channel`
+            break
+          }
           case 'list':
             onMembers()
             break

@@ -1,6 +1,13 @@
 <script setup>
 import UserAvatar from '../../../components/UserAvatar.vue'
-defineProps({ members: Array, adminId: String, canInvite: Boolean })
+defineProps({
+  members: Array,
+  adminId: String,
+  canInvite: Boolean,
+  // { [userId]: [voterId, ...] } from the channel; empty for private channels.
+  kickVotes: { type: Object, default: () => ({}) },
+  kickThreshold: Number
+})
 defineEmits(['invite', 'close'])
 </script>
 <template>
@@ -23,7 +30,13 @@ defineEmits(['invite', 'close'])
           >@{{ member.nickName }} ·
           {{ member.status === 'dnd' ? 'Do not disturb' : member.status }}</span
         ></div
-      ><q-icon
+      >
+      ><span v-if="kickVotes[member.id]?.length" class="kick-votes"
+        >{{ kickVotes[member.id].length }}/{{ kickThreshold
+        }}<q-tooltip>Kick votes toward a permanent ban</q-tooltip></span
+      >
+
+      <q-icon
         v-if="member.id === adminId"
         name="shield"
         size="15px"
@@ -86,6 +99,14 @@ defineEmits(['invite', 'close'])
   font-size: 10px;
   color: #687b6d;
   margin-top: 3px;
+}
+.kick-votes {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ae5364;
+  background: #fbecee;
+  border-radius: 10px;
+  padding: 2px 7px;
 }
 .admin-icon {
   color: #315ee8;
