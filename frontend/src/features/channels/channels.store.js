@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { workspaceService } from '../../services/index.js'
+import { inactiveDays, workspaceService } from '../../services/index.js'
 import { useMessagesStore } from '../chat/messages.store.js'
 
 export const useChannelsStore = defineStore('channels', () => {
@@ -17,14 +17,14 @@ export const useChannelsStore = defineStore('channels', () => {
   let selection = 0
   async function refresh() {
     const previous = active.value
+    const before = channels.value
     channels.value = await workspaceService.listChannels()
-    if (
-      previous &&
-      !channels.value.some(channel => channel.id === previous.id)
-    ) {
-      useMessagesStore().forget(previous.id)
-      notice.value = `You no longer have access to #${previous.name}. You were removed, or the channel was deleted.`
-    }
+    // Drop cached messages of every channel that disappeared, not only the open one.
+    const remaining = new Set(channels.value.map(channel => channel.id))
+    for (const channel of before)
+      if (!remaining.has(channel.id)) useMessagesStore().forget(channel.id)
+    if (previous && !remaining.has(previous.id))
+      notice.value = `You no longer have access to #${previous.name}. You were removed, or the channel was deleted or expired after ${inactiveDays} days without messages.`
     if (!channels.value.some(channel => channel.id === activeId.value))
       activeId.value =
         channels.value.find(channel => channel.id === 'general')?.id ||
@@ -91,6 +91,15 @@ export const useChannelsStore = defineStore('channels', () => {
     if (activeId.value === id) await select(id)
     return result
   }
+  // Demo: age the channel past the limit, then let the expiry sweep remove it.
+  async function simulateInactivity(id) {
+    // The service deletes the channel, so its name must be read beforehand.
+    const name = channels.value.find(channel => channel.id === id)?.name
+    await workspaceService.simulateInactivity(id)
+    await refresh()
+    await select(activeId.value)
+    notice.value = `#${name} expired after ${inactiveDays} days without messages and was deleted. Its name can be used for a new channel.`
+  }
   // Re-read channels and the open channel's members after someone else's change.
   // Called by useLiveUpdates, which decides when delivery is allowed (not offline).
   async function sync() {
@@ -123,6 +132,7 @@ export const useChannelsStore = defineStore('channels', () => {
     kick,
     revoke,
     sync,
+    simulateInactivity,
     reset
   }
 })

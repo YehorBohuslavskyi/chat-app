@@ -1,7 +1,9 @@
 import { createFixtures, demoCredentials } from './fixtures.js'
 
 // v2: channels gained bannedIds and kickVotes, so older saved data is not reused.
-const key = 'loop-prototype-v2'
+// v3: channels gained lastMessageAt (v2 added bannedIds and kickVotes),
+// so older saved data is not reused.
+const key = 'loop-prototype-v3'
 const sessionKey = 'loop-session-v1'
 // Unsent drafts are live-only, so they live apart from the workspace data.
 const draftKey = 'loop-drafts-v1'
@@ -14,6 +16,9 @@ const validName = /^[a-z0-9][a-z0-9_-]{1,31}$/
 // Distinct member votes needed to ban someone from a public channel.
 export const kickThreshold = 3
 export const statuses = ['online', 'dnd', 'offline']
+// Channels without a message for longer than this are deleted.
+export const inactiveDays = 30
+const dayMs = 24 * 60 * 60 * 1000
 export const notificationModes = ['all', 'mentions']
 // Sample lines for the "receive a message" demo control.
 // "Demo: a teammate types" scripts: type `first`, backspace `erase` characters,
@@ -148,8 +153,45 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     if (!channel.bannedIds.includes(targetId)) channel.bannedIds.push(targetId)
     delete channel.kickVotes[targetId]
   }
+  // Every new message goes through here, so any message resets the expiry clock.
+  const addMessage = (channelId, senderId, body) => {
+    const message = {
+      id: ++data.sequence,
+      channelId,
+      senderId,
+      body,
+      createdAt: new Date().toISOString()
+    }
+    data.messages.push(message)
+    const channel = data.channels.find(item => item.id === channelId)
+    if (channel) channel.lastMessageAt = message.createdAt
+    return message
+  }
+  // Expired: no message for MORE than inactiveDays (exactly 30 days is not yet).
+  const isExpired = (channel, now) =>
+    now - Date.parse(channel.lastMessageAt) > inactiveDays * dayMs
+  // Lazy expiration: a server would run this on a schedule; the mock runs it
+  // before every request, so an expired channel is never returned.
+  const expireInactive = () => {
+    const now = Date.now()
+    const expired = new Set(
+      data.channels
+        .filter(channel => isExpired(channel, now))
+        .map(channel => channel.id)
+    )
+    if (!expired.size) return
+    // Deleting the channel record is what frees its name for create().
+    data.channels = data.channels.filter(channel => !expired.has(channel.id))
+    data.messages = data.messages.filter(
+      message => !expired.has(message.channelId)
+    )
+    for (const id of expired) delete drafts[id]
+    save()
+    saveDrafts()
+  }
   const run = async action => {
     if (latency) await new Promise(resolve => setTimeout(resolve, latency))
+    expireInactive()
     return copy(await action())
   }
   const setSession = id => {
@@ -190,7 +232,9 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
       memberIds: [user.id],
       invitedIds: [],
       bannedIds: [],
-      kickVotes: {}
+      kickVotes: {},
+      // A new channel counts as active from its creation.
+      lastMessageAt: new Date().toISOString()
     }
     data.channels.push(channel)
     save()
@@ -501,15 +545,12 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           throw new Error(
             'Nobody else is in this channel yet. Invite someone first.'
           )
-        data.messages.push({
-          id: ++data.sequence,
-          channelId: id,
-          senderId: senders[Math.floor(Math.random() * senders.length)],
-          body:
-            (mention ? `@${currentUser().nickName} ` : '') +
-            incomingLines[Math.floor(Math.random() * incomingLines.length)],
-          createdAt: new Date().toISOString()
-        })
+        addMessage(
+          id,
+          senders[Math.floor(Math.random() * senders.length)],
+          (mention ? `@${currentUser().nickName} ` : '') +
+            incomingLines[Math.floor(Math.random() * incomingLines.length)]
+        )
         save()
         // After this request resolves, like a server push arriving a moment later.
         setTimeout(() => notify('data'))
@@ -591,13 +632,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
             setTimeout(tick, typingStepMs)
             return
           }
-          data.messages.push({
-            id: ++data.sequence,
-            channelId: id,
-            senderId,
-            body: frames.at(-1),
-            createdAt: new Date().toISOString()
-          })
+          addMessage(id, senderId, frames.at(-1))
           save()
           finish()
           notify('data')
@@ -607,20 +642,25 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           nickName: data.users.find(user => user.id === senderId).nickName
         }
       }),
+    // Demo control: pretend the channel has been quiet for `days` days. The
+    // next request's expiry sweep removes it, exactly like real inactivity.
+    simulateInactivity: (id, days = inactiveDays + 1) =>
+      run(() => {
+        const channel = channelFor(id)
+        channel.lastMessageAt = new Date(
+          Date.now() - days * dayMs
+        ).toISOString()
+        // Other tabs learn about it through the storage event that save() causes.
+        save()
+        return { name: channel.name }
+      }),
     sendMessage: (id, body) =>
       run(() => {
         channelFor(id)
         body = body.trim()
         if (!body || body.length > 4000)
           throw new Error('Messages must contain 1–4,000 characters.')
-        const message = {
-          id: ++data.sequence,
-          channelId: id,
-          senderId: userId,
-          body,
-          createdAt: new Date().toISOString()
-        }
-        data.messages.push(message)
+        const message = addMessage(id, userId, body)
         save()
         // Sending finishes the draft, even if the client never cleared it.
         writeDraft(id, userId, '')

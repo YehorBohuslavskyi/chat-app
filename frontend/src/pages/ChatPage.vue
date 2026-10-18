@@ -67,6 +67,14 @@ async function simulateTyping() {
     feedback.value = cause.message
   }
 }
+// Demo control for the 30-day expiry; errors appear like command feedback.
+async function simulateInactivity() {
+  try {
+    await channels.simulateInactivity(channels.activeId)
+  } catch (cause) {
+    feedback.value = cause.message
+  }
+}
 const canInvite = computed(
   () =>
     channels.active?.type === 'public' ||
@@ -94,6 +102,7 @@ const canInvite = computed(
         @leave="askLeave()"
         @simulate-incoming="simulateIncoming"
         @simulate-typing="simulateTyping()"
+        @simulate-inactivity="simulateInactivity()"
         @help="helpOpen = true" /><div class="conversation-body"
         ><div class="conversation-column"
           ><MessageList

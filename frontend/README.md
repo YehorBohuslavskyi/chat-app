@@ -63,7 +63,7 @@ History is assignment UC7. Message search is an additional frontend feature, not
 - `layouts/` contains the page shells; `pages/` composes feature components.
 - `features/auth`, `features/channels`, and `features/chat` own their Pinia state. Command execution lives in `useChatActions`; parsing and mention tokenization are pure utilities.
 - `services/index.js` selects the asynchronous mock adapter. UI components do not make HTTP calls. Replace this adapter with real service implementations when the backend contract is agreed; the existing Axios boot file remains available for integration.
-- Mock data persists in `localStorage` under `loop-prototype-v2`; the signed-in identity is tab-local `sessionStorage` under `loop-session-v1`. If storage is unavailable, the prototype runs in memory. Logout clears identity and Pinia caches, while sample workspace data remains available for subsequent sign-in. Clear these two keys to reset the demo.
+- Mock data persists in `localStorage` under `loop-prototype-v3`; the signed-in identity is tab-local `sessionStorage` under `loop-session-v1`. If storage is unavailable, the prototype runs in memory. Logout clears identity and Pinia caches, while sample workspace data remains available for subsequent sign-in. Clear these two keys to reset the demo.
 - This is a single-tab local simulation, not a secure authentication system or synchronized multi-user app. Registered sample passwords are stored as mock digests, never plaintext; do not use real credentials. Server authorization is still required.
 - Names are case-insensitive, normalized to lowercase, and use 2–32 letters, numbers, hyphens, or underscores. A nickname/channel name must begin with a letter or number.
 - Invitations provisionally add membership immediately; opening the channel clears its unseen marker. This follows the proposed default in the project plan and still needs instructor/team confirmation for the final implementation.
@@ -80,6 +80,13 @@ Provisional rules, pending instructor confirmation of the first/second kick beha
 - Nobody can kick or revoke themselves or the administrator.
 - Demo data: alex's `/kick james` in `#general` is the third vote, and alex is banned from `#feedback`.
 - Two tabs signed in as different users share data through the `storage` event, so a kicked user's tab shows a lost-access notice.
+
+## Inactive-channel expiration
+
+- Each channel stores `lastMessageAt`, set when it is created and by every new message (sent, received, or from a demo).
+- Before every service request, channels with no message for more than 30 days are deleted together with their messages and drafts (lazy expiration; a server would run this on a schedule). Deleting the record frees the name for a new channel.
+- Expired channels leave the channel list and their cached messages are dropped. If the open channel expired, another channel (or the empty state) replaces it and a notice explains why. Other tabs see the same through the storage event.
+- Demo: channel menu → **Demo: 31 days without messages** moves that channel's `lastMessageAt` back 31 days; the expiry rule itself is not faked.
 
 ## User status
 

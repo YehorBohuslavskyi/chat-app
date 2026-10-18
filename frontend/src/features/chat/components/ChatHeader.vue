@@ -6,7 +6,8 @@ defineEmits([
   'leave',
   'help',
   'simulate-incoming',
-  'simulate-typing'
+  'simulate-typing',
+  'simulate-inactivity'
 ])
 </script>
 <template>
@@ -73,6 +74,14 @@ defineEmits([
                 ><q-icon name="alternate_email" /></q-item-section
               ><q-item-section
                 >Demo: a mention in 5 seconds</q-item-section
+              ></q-item
+            ><q-item
+              clickable
+              v-close-popup
+              @click="$emit('simulate-inactivity')"
+              ><q-item-section avatar><q-icon name="update" /></q-item-section
+              ><q-item-section
+                >Demo: 31 days without messages</q-item-section
               ></q-item
             ><q-separator /><q-item
               clickable

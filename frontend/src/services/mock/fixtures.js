@@ -175,5 +175,10 @@ export function createFixtures() {
       })
     }
   }
+  // Last activity: the newest message, or now for a channel without messages.
+  for (const channel of channels) {
+    const last = messages.findLast(message => message.channelId === channel.id)
+    channel.lastMessageAt = last?.createdAt || new Date().toISOString()
+  }
   return { users, channels, messages, sequence, credentials: {} }
 }
