@@ -507,8 +507,10 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     // Messages from other people in the user's channels with an id above `after`.
     // Ids are one global sequence, so `cursor` (the newest id) covers every channel.
     // `after = null` returns only the cursor: a baseline that never notifies.
-    incoming: (after = null) =>
-      run(() => {
+    incoming: (after = null) => {
+      // Capture the initial cursor before latency so new arrivals are not skipped.
+      const baseline = data.sequence
+      return run(() => {
         const user = requireUser()
         const mine = new Map(
           data.channels
@@ -530,9 +532,10 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
             channelName: mine.get(message.channelId),
             sender: data.users.find(item => item.id === message.senderId)
           })),
-          cursor: data.sequence
+          cursor: after === null ? baseline : data.sequence
         }
-      }),
+      })
+    },
     // Demo control: a random other member posts in the channel. The message is
     // stored like any other; delivery to this tab goes through notify().
     simulateIncoming: (id, { mention = false } = {}) =>
