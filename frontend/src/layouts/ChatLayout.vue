@@ -11,6 +11,7 @@ import ChannelList from '../features/channels/components/ChannelList.vue'
 import ChannelDialog from '../features/channels/components/ChannelDialog.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import BrandMark from '../components/BrandMark.vue'
+import NotificationPrompt from '../features/notifications/components/NotificationPrompt.vue'
 import NotificationSettings from '../features/notifications/components/NotificationSettings.vue'
 
 const auth = useAuthStore()
@@ -266,6 +267,7 @@ onMounted(() => channels.initialize())
               @open-channel-dialog="openDialog" /></router-view></div
       ></q-page-container>
     </q-layout>
+    <NotificationPrompt />
     <NotificationSettings v-model="settingsOpen" />
     <ChannelDialog
       v-model="dialogOpen"

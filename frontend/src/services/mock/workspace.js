@@ -1,8 +1,7 @@
 import { createFixtures, demoCredentials } from './fixtures.js'
+import { restoreWorkspace } from './storage.js'
 
-// v2: channels gained bannedIds and kickVotes, so older saved data is not reused.
-// v3: channels gained lastMessageAt (v2 added bannedIds and kickVotes),
-// so older saved data is not reused.
+// v3 adds lastMessageAt; restoreWorkspace migrates existing v2 accounts and data.
 const key = 'loop-prototype-v3'
 const sessionKey = 'loop-session-v1'
 // Unsent drafts are live-only, so they live apart from the workspace data.
@@ -81,8 +80,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
   // Senders currently "typing" in a demo, as `${channelId}:${userId}`.
   const typingNow = new Set()
   try {
-    const saved = storage?.getItem(key)
-    if (saved) data = JSON.parse(saved)
+    data = restoreWorkspace(storage, data)
     userId = session?.getItem(sessionKey) || null
   } catch {
     /* Private browsing or unavailable storage falls back to this session. */

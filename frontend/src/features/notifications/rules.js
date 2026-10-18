@@ -5,7 +5,7 @@ import { isAddressed } from '../chat/utils/mentions.js'
 // Notify only for someone else's message while the app is hidden, the user is
 // not in Do not disturb, and the user's mode allows it.
 export function shouldNotify({ message, user, visible }) {
-  if (visible) return false
+  if (!user || visible || user.status === 'offline') return false
   if (user.status === 'dnd') return false
   if (message.senderId === user.id) return false
   // Accounts created before this setting existed have no value: treat as 'all'.

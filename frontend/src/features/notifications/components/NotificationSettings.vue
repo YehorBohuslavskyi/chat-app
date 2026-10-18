@@ -74,6 +74,26 @@ watch(open, value => {
           icon left of the address) and set Notifications to Allow, then reload.
         </p>
         <p v-else class="hint">This browser cannot show notifications.</p>
+        <q-btn
+          v-if="notifications.permission === 'granted'"
+          outline
+          no-caps
+          color="primary"
+          label="Test notification in 5 seconds"
+          @click="notifications.testNotification()"
+        />
+        <p v-if="notifications.testStatus" class="hint" role="status">{{
+          notifications.testStatus
+        }}</p>
+        <p v-if="notifications.deliveryStatus" class="hint" role="status">{{
+          notifications.deliveryStatus
+        }}</p>
+        <p
+          v-if="notifications.deliveryError"
+          class="settings-error"
+          role="alert"
+          >{{ notifications.deliveryError }}</p
+        >
         <p class="hint q-mt-md"
           >Notifications appear only while Sideby is in the background, and
           never in Do not disturb.</p

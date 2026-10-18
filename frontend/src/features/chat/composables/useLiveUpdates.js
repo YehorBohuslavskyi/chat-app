@@ -18,10 +18,17 @@ export function useLiveUpdates() {
   const pending = ref(0)
   async function sync() {
     try {
-      await channels.sync()
-      await messages.catchUpAll()
-      await notifications.check(id => channels.select(id))
-      await typing.refresh()
+      // Notification delivery must not depend on history or membership refresh succeeding.
+      const results = await Promise.allSettled([
+        notifications.check(id => channels.select(id)),
+        (async () => {
+          await channels.sync()
+          await messages.catchUpAll()
+          await typing.refresh()
+        })()
+      ])
+      const failure = results.find(result => result.status === 'rejected')
+      if (failure) throw failure.reason
     } catch (cause) {
       channels.error = cause.message
     }
