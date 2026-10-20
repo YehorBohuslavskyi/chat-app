@@ -23,7 +23,7 @@ async function bottom() {
   await nextTick()
   if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight
 }
-// Prepending older messages keeps the reader's place by restoring the distance from the bottom.
+
 async function older() {
   const element = scroller.value
   if (!element || !state.value?.hasMore || state.value.loadingOlder) return
@@ -34,7 +34,7 @@ async function older() {
   scroller.value.scrollTop = scroller.value.scrollHeight - fromBottom
   await fill()
 }
-// Keep fetching while the history does not overflow, so scrolling up is possible.
+
 async function fill() {
   const element = scroller.value
   if (
@@ -51,7 +51,7 @@ function scroll() {
     element.scrollHeight - element.scrollTop - element.clientHeight < 100
   if (element.scrollTop < 120 && !state.value?.olderError) older()
 }
-// Follow new messages only; prepended history must not jump to the bottom.
+
 watch(
   () => items.value.at(-1)?.id,
   () => {
@@ -172,7 +172,7 @@ onMounted(async () => {
   padding: 12px 25px;
   color: #ae5364;
 }
-/* Fixed height: swapping button, spinner, error, and end marker must not move the content. */
+
 .history-top {
   height: 44px;
   display: flex;

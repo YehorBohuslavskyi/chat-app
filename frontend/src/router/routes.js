@@ -31,7 +31,6 @@ const routes = [
     ]
   },
 
-  // Keep the fallback after all application routes.
   {
     path: '/:catchAll(.*)*',
     component: () => import('@/pages/ErrorNotFound.vue')

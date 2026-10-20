@@ -1,10 +1,9 @@
 import { createFixtures, demoCredentials } from './fixtures.js'
 import { restoreWorkspace } from './storage.js'
 
-// v3 adds lastMessageAt; restoreWorkspace migrates existing v2 accounts and data.
 const key = 'loop-prototype-v3'
 const sessionKey = 'loop-session-v1'
-// Unsent drafts are live-only, so they live apart from the workspace data.
+
 const draftKey = 'loop-drafts-v1'
 const copy = value => JSON.parse(JSON.stringify(value))
 const normalize = value =>
@@ -12,16 +11,14 @@ const normalize = value =>
     .trim()
     .toLowerCase()
 const validName = /^[a-z0-9][a-z0-9_-]{1,31}$/
-// Distinct member votes needed to ban someone from a public channel.
+
 export const kickThreshold = 3
 export const statuses = ['online', 'dnd', 'offline']
-// Channels without a message for longer than this are deleted.
+
 export const inactiveDays = 30
 const dayMs = 24 * 60 * 60 * 1000
 export const notificationModes = ['all', 'mentions']
-// Sample lines for the "receive a message" demo control.
-// "Demo: a teammate types" scripts: type `first`, backspace `erase` characters,
-// then type `rest`. The result is sent as a message.
+
 const typingScripts = [
   { first: 'I can take the relaese', erase: 7, rest: 'release notes tonight.' },
   {
@@ -44,16 +41,14 @@ const incomingLines = [
   'Small win: the tests are green again.'
 ]
 
-// Local prototype only. Production authentication and authorization belong on the server.
 export function createMockService({ storage, session, latency = 140 } = {}) {
   let data = createFixtures()
   let userId = null
   const listeners = new Set()
-  // Tells subscribers that shared data changed (another tab, or a simulated teammate).
-  // `kind` is 'data' (messages, channels, users) or 'drafts' (live typing).
+
   const notify = (kind = 'data') =>
     listeners.forEach(listener => listener(kind))
-  // { [channelId]: { [userId]: { text, updatedAt } } }
+
   let drafts = {}
   try {
     drafts = JSON.parse(storage?.getItem(draftKey) || '{}')
@@ -63,9 +58,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
   const saveDrafts = () => {
     try {
       storage?.setItem(draftKey, JSON.stringify(drafts))
-    } catch {
-      /* Drafts still work in this tab without storage. */
-    }
+    } catch {}
   }
   const writeDraft = (channelId, authorId, text) => {
     drafts[channelId] ||= {}
@@ -77,23 +70,20 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     else delete drafts[channelId][authorId]
     saveDrafts()
   }
-  // Senders currently "typing" in a demo, as `${channelId}:${userId}`.
+
   const typingNow = new Set()
   try {
     data = restoreWorkspace(storage, data)
     userId = session?.getItem(sessionKey) || null
-  } catch {
-    /* Private browsing or unavailable storage falls back to this session. */
-  }
+  } catch {}
   const save = () => {
     try {
       storage?.setItem(key, JSON.stringify(data))
     } catch {
       storage = undefined
-    } // Keep the prototype usable when storage is full or disabled.
+    }
   }
-  // Another tab (signed in as someone else) saved a change: reload it so this tab
-  // sees kicks, bans, and new channels. Lets two tabs act as two users.
+
   globalThis.addEventListener?.('storage', event => {
     if (event.key === draftKey) {
       try {
@@ -129,7 +119,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     data.users.find(
       item => item.nickName === normalize(nickName).replace(/^@/, '')
     )
-  // A moderation target must be another ordinary member of the channel.
+
   const targetIn = (channel, nickName) => {
     const target = findUser(nickName)
     if (!target || !channel.memberIds.includes(target.id))
@@ -151,7 +141,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     if (!channel.bannedIds.includes(targetId)) channel.bannedIds.push(targetId)
     delete channel.kickVotes[targetId]
   }
-  // Every new message goes through here, so any message resets the expiry clock.
+
   const addMessage = (channelId, senderId, body) => {
     const message = {
       id: ++data.sequence,
@@ -165,11 +155,10 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
     if (channel) channel.lastMessageAt = message.createdAt
     return message
   }
-  // Expired: no message for MORE than inactiveDays (exactly 30 days is not yet).
+
   const isExpired = (channel, now) =>
     now - Date.parse(channel.lastMessageAt) > inactiveDays * dayMs
-  // Lazy expiration: a server would run this on a schedule; the mock runs it
-  // before every request, so an expired channel is never returned.
+
   const expireInactive = () => {
     const now = Date.now()
     const expired = new Set(
@@ -178,7 +167,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         .map(channel => channel.id)
     )
     if (!expired.size) return
-    // Deleting the channel record is what frees its name for create().
+
     data.channels = data.channels.filter(channel => !expired.has(channel.id))
     data.messages = data.messages.filter(
       message => !expired.has(message.channelId)
@@ -231,7 +220,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
       invitedIds: [],
       bannedIds: [],
       kickVotes: {},
-      // A new channel counts as active from its creation.
+
       lastMessageAt: new Date().toISOString()
     }
     data.channels.push(channel)
@@ -240,7 +229,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
   }
   return {
     sessionUser: () => copy(currentUser()),
-    // Called when another tab changed the shared data. Returns an unsubscribe function.
+
     onExternalChange: listener => {
       listeners.add(listener)
       return () => listeners.delete(listener)
@@ -284,7 +273,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         )
           throw new Error('That email or nickname is already in use.')
         const passwordHash = await digest(input.password)
-        // Recheck after asynchronous work so simultaneous registrations cannot duplicate an account.
+
         if (
           data.users.some(
             user => user.email === email || user.nickName === nickName
@@ -311,7 +300,6 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
       }),
     logout: () =>
       run(() => {
-        // Signing out abandons every unsent draft of this user.
         if (userId) for (const id in drafts) writeDraft(id, userId, '')
         setSession(null)
         return null
@@ -370,10 +358,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           data.channels = data.channels.filter(item => item.id !== id)
           data.messages = data.messages.filter(item => item.channelId !== id)
         } else {
-          channel.memberIds = channel.memberIds.filter(item => item !== userId)
-          channel.invitedIds = channel.invitedIds.filter(
-            item => item !== userId
-          )
+          removeMember(channel, userId)
         }
         save()
         return { deleted: admin }
@@ -406,7 +391,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         save()
         return channel
       }),
-    // Public channels. The admin bans at once; others add one vote each.
+
     kick: (id, nickName) =>
       run(() => {
         const channel = channelFor(id)
@@ -439,7 +424,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           needed: kickThreshold
         }
       }),
-    // Private channels. Only the admin; no ban, so a new invitation restores access.
+
     revoke: (id, nickName) =>
       run(() => {
         const channel = channelFor(id)
@@ -459,9 +444,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         const channel = channelFor(id)
         return data.users.filter(user => channel.memberIds.includes(user.id))
       }),
-    // Cursor pagination: `before` is the oldest message id the client already has.
-    // Ids come from one increasing sequence, so they give a stable, gap-free order.
-    // `before` pages backwards (older history); `after` pages forwards (missed messages).
+
     messageHistory: (id, { before = null, after = null, limit = 20 } = {}) =>
       run(() => {
         channelFor(id)
@@ -470,8 +453,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           message =>
             message.channelId === id && (before === null || message.id < before)
         )
-        // `after` continues forwards from a known message, so it takes the oldest
-        // page of newer messages; otherwise the newest page closest to `before`.
+
         const matching =
           after === null
             ? messages
@@ -504,11 +486,8 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         save()
         return user
       }),
-    // Messages from other people in the user's channels with an id above `after`.
-    // Ids are one global sequence, so `cursor` (the newest id) covers every channel.
-    // `after = null` returns only the cursor: a baseline that never notifies.
+
     incoming: (after = null) => {
-      // Capture the initial cursor before latency so new arrivals are not skipped.
       const baseline = data.sequence
       return run(() => {
         const user = requireUser()
@@ -536,8 +515,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
         }
       })
     },
-    // Demo control: a random other member posts in the channel. The message is
-    // stored like any other; delivery to this tab goes through notify().
+
     simulateIncoming: (id, { mention = false } = {}) =>
       run(() => {
         const channel = channelFor(id)
@@ -553,11 +531,11 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
             incomingLines[Math.floor(Math.random() * incomingLines.length)]
         )
         save()
-        // After this request resolves, like a server push arriving a moment later.
+
         setTimeout(() => notify('data'))
         return { channelId: id }
       }),
-    // Other members' unsent text in the channel (never the caller's own).
+
     drafts: id =>
       run(() => {
         const channel = channelFor(id)
@@ -575,15 +553,14 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           }))
           .filter(draft => draft.user)
       }),
-    // The caller's draft; empty text clears it ("stopped typing").
+
     setDraft: (id, text) =>
       run(() => {
         channelFor(id)
         writeDraft(id, userId, String(text ?? '').slice(0, 4000))
         return null
       }),
-    // Demo control: a teammate types (with a typo they fix), pauses, and sends.
-    // Every keystroke updates their draft and notifies like a server push.
+
     simulateTyping: id =>
       run(() => {
         const channel = channelFor(id)
@@ -619,7 +596,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           writeDraft(id, senderId, '')
           notify('drafts')
         }
-        // Stop if the channel or the sender's membership disappears meanwhile.
+
         const stillThere = () =>
           data.channels
             .find(item => item.id === id)
@@ -643,15 +620,14 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           nickName: data.users.find(user => user.id === senderId).nickName
         }
       }),
-    // Demo control: pretend the channel has been quiet for `days` days. The
-    // next request's expiry sweep removes it, exactly like real inactivity.
+
     simulateInactivity: (id, days = inactiveDays + 1) =>
       run(() => {
         const channel = channelFor(id)
         channel.lastMessageAt = new Date(
           Date.now() - days * dayMs
         ).toISOString()
-        // Other tabs learn about it through the storage event that save() causes.
+
         save()
         return { name: channel.name }
       }),
@@ -663,7 +639,7 @@ export function createMockService({ storage, session, latency = 140 } = {}) {
           throw new Error('Messages must contain 1–4,000 characters.')
         const message = addMessage(id, userId, body)
         save()
-        // Sending finishes the draft, even if the client never cleared it.
+
         writeDraft(id, userId, '')
         return { ...message, sender: currentUser() }
       })

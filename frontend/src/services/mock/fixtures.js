@@ -109,8 +109,7 @@ export function createFixtures() {
       invitedIds: []
     }
   ]
-  // Moderation demo data: alex's /kick on james in #general is the third vote,
-  // and alex is banned from #feedback, so /join feedback shows the banned state.
+
   for (const channel of channels) {
     channel.bannedIds = []
     channel.kickVotes = {}
@@ -175,7 +174,7 @@ export function createFixtures() {
       })
     }
   }
-  // Last activity: the newest message, or now for a channel without messages.
+
   for (const channel of channels) {
     const last = messages.findLast(message => message.channelId === channel.id)
     channel.lastMessageAt = last?.createdAt || new Date().toISOString()

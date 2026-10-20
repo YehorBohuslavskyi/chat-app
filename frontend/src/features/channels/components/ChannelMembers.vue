@@ -4,7 +4,7 @@ defineProps({
   members: Array,
   adminId: String,
   canInvite: Boolean,
-  // { [userId]: [voterId, ...] } from the channel; empty for private channels.
+
   kickVotes: { type: Object, default: () => ({}) },
   kickThreshold: Number
 })

@@ -47,7 +47,7 @@ const {
     helpOpen.value = true
   }
 })
-// Demo control for incoming activity; errors appear like command feedback.
+
 async function simulateIncoming(options = {}) {
   if (options.delay)
     feedback.value =
@@ -58,7 +58,7 @@ async function simulateIncoming(options = {}) {
     feedback.value = cause.message
   }
 }
-// Demo control for live drafts; errors appear like command feedback.
+
 async function simulateTyping() {
   try {
     const { nickName } = await typing.simulateTyping(channels.activeId)
@@ -67,7 +67,7 @@ async function simulateTyping() {
     feedback.value = cause.message
   }
 }
-// Demo control for the 30-day expiry; errors appear like command feedback.
+
 async function simulateInactivity() {
   try {
     await channels.simulateInactivity(channels.activeId)

@@ -4,7 +4,6 @@ import { useChannelsStore } from '../../channels/channels.store.js'
 import { useMessagesStore } from '../messages.store.js'
 import { parseCommand } from '../utils/parseCommand.js'
 
-// UI and slash commands share store operations and the same destructive-action dialog.
 export function useChatActions({ onMembers, onHelp }) {
   const auth = useAuthStore()
   const channels = useChannelsStore()
@@ -53,7 +52,7 @@ export function useChatActions({ onMembers, onHelp }) {
     feedback.value = ''
     try {
       const parsed = parseCommand(body)
-      // Offline users cannot send; throwing skips clear(), so the draft is kept.
+
       if (parsed.type === 'message' && auth.user?.status === 'offline')
         throw new Error('You are offline. Go online to send messages.')
       if (parsed.type === 'message') await messages.send(channelId, parsed.body)

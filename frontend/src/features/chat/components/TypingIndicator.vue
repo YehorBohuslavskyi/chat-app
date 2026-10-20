@@ -4,7 +4,7 @@ import { staleAfterMs, useTypingStore } from '../typing.store.js'
 
 const props = defineProps({ channel: Object })
 const typing = useTypingStore()
-// Re-evaluated every few seconds so abandoned drafts disappear on their own.
+
 const now = ref(Date.now())
 let clock
 onMounted(() => {
@@ -22,7 +22,7 @@ const active = computed(() =>
     draft => now.value - Date.parse(draft.updatedAt) < staleAfterMs
   )
 )
-// The member whose draft is open; kept after they finish to say so.
+
 const previewId = ref(null)
 const previewName = ref('')
 const preview = computed(() =>
@@ -96,7 +96,7 @@ const separator = index =>
 .typing-region {
   margin: 0 26px;
 }
-/* Fixed height: the line appearing must not push the composer around. */
+
 .typing-line {
   min-height: 22px;
   display: flex;

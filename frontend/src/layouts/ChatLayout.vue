@@ -37,7 +37,7 @@ async function changeStatus(status) {
   error.value = ''
   try {
     await auth.setStatus(status)
-    // Your own row in the member list shows the new status too.
+
     if (channels.activeId) await channels.select(channels.activeId)
   } catch (cause) {
     error.value = cause.message

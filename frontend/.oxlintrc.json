@@ -18,11 +18,6 @@
 
   "categories": {
     "correctness": "error"
-    // "style": "error",
-    // "pedantic": "warn",
-    // "suspicious": "error",
-    // "perf": "error",
-    // "restriction": "error"
   },
 
   "rules": {},

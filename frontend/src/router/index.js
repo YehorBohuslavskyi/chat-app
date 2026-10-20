@@ -19,7 +19,6 @@ export default defineRouter(() => {
     scrollBehavior: () => ({ left: 0, top: 0 }),
     routes,
 
-    // Router mode and base are configured in quasar.config.js.
     history: createHistory(import.meta.env.QUASAR_VUE_ROUTER_BASE)
   })
 

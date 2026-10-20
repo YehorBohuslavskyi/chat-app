@@ -3,19 +3,16 @@ import { ref } from 'vue'
 import { workspaceService } from '../../services/index.js'
 import { useAuthStore } from '../auth/auth.store.js'
 
-// A draft not updated for this long is treated as abandoned (e.g. a closed tab).
 export const staleAfterMs = 30000
-// Own keystrokes are sent at most this often; clearing is sent immediately.
+
 const publishEveryMs = 250
 
 export const useTypingStore = defineStore('typing', () => {
-  // Other members' drafts in the watched channel: [{ user, text, updatedAt }].
   const drafts = ref([])
   const channelId = ref(null)
   let loading = false
   let again = false
-  // Typing produces bursts of updates: one request at a time, plus one more
-  // afterwards if anything changed meanwhile.
+
   async function refresh() {
     const id = channelId.value
     if (!id) return
@@ -28,7 +25,6 @@ export const useTypingStore = defineStore('typing', () => {
       const result = await workspaceService.drafts(id)
       if (channelId.value === id) drafts.value = result
     } catch {
-      // Lost access or signed out: nobody is shown typing.
       if (channelId.value === id) drafts.value = []
     } finally {
       loading = false
@@ -43,7 +39,7 @@ export const useTypingStore = defineStore('typing', () => {
     drafts.value = []
     refresh()
   }
-  // Only the component watching `id` may stop watching it.
+
   function unwatchChannel(id) {
     if (channelId.value === id) watchChannel(null)
   }
@@ -51,7 +47,6 @@ export const useTypingStore = defineStore('typing', () => {
     drafts.value = []
   }
 
-  // Own draft per channel as last sent, so unchanged text is not resent.
   const published = new Map()
   let queued = null
   let timer = null
@@ -66,7 +61,6 @@ export const useTypingStore = defineStore('typing', () => {
     workspaceService.setDraft(id, text).catch(() => {})
   }
   function publish(id, text) {
-    // Commands are not messages, and offline users broadcast nothing.
     const offline = useAuthStore().user?.status === 'offline'
     if (offline || text.trimStart().startsWith('/') || !text.trim()) text = ''
     queued = { id, text }
@@ -76,7 +70,7 @@ export const useTypingStore = defineStore('typing', () => {
   function clearOwn(id) {
     publish(id, '')
   }
-  // Going offline or signing out: withdraw every draft this tab published.
+
   function withdrawAll() {
     for (const [id, text] of published) if (text) clearOwn(id)
   }

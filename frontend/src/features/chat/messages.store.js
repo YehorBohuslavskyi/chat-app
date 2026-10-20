@@ -18,13 +18,13 @@ export const useMessagesStore = defineStore('messages', () => {
       loadingOlder: false,
       olderError: ''
     })
-  // Merge by id so overlapping pages or a concurrent send never duplicate a message.
+
   const merge = (state, items) => {
     state.items = Array.from(
       new Map([...items, ...state.items].map(item => [item.id, item])).values()
     ).sort((a, b) => a.id - b.id)
   }
-  // Stale responses are dropped after sign-out, leaving, or channel removal.
+
   const guard = id => {
     const ticket = generation
     const revision = revisions.get(id)
@@ -71,7 +71,7 @@ export const useMessagesStore = defineStore('messages', () => {
       if (current()) state.loadingOlder = false
     }
   }
-  // Fetch everything newer than the newest loaded message, page by page.
+
   async function catchUp(id) {
     const state = stateFor(id)
     if (!state.loaded) return
@@ -87,15 +87,14 @@ export const useMessagesStore = defineStore('messages', () => {
       hasMore = result.hasMore
     }
   }
-  // Every channel opened in this session; unopened channels load fresh anyway.
+
   async function catchUpAll() {
     const ids = Object.keys(byChannel.value).filter(
       id => byChannel.value[id].loaded
     )
     await Promise.all(ids.map(catchUp))
   }
-  // Demo control; the message arrives through useLiveUpdates like real activity.
-  // `delay` (ms) leaves time to switch tabs so a notification can appear.
+
   async function simulateIncoming(id, { delay = 0, mention = false } = {}) {
     if (delay) await new Promise(resolve => setTimeout(resolve, delay))
     await workspaceService.simulateIncoming(id, { mention })

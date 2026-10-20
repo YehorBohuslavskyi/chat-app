@@ -1,4 +1,4 @@
-﻿node_modules/
+node_modules/
 dist/
 build/
 .quasar/
@@ -6,12 +6,8 @@ build/
 *.log
 .DS_Store
 tmp/
-
-# Local IDE settings
 .idea/
 .vscode/
-
-# Local development requirements and checklist
 /PROJECT_PLAN.local.md
 /FRONTEND_STRUCTURE.local.md
 /README.temporary.md

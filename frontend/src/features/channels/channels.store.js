@@ -12,14 +12,14 @@ export const useChannelsStore = defineStore('channels', () => {
   const active = computed(() =>
     channels.value.find(channel => channel.id === activeId.value)
   )
-  // Shown when the open channel disappears without the user leaving it (kick, ban, revoke).
+
   const notice = ref('')
   let selection = 0
   async function refresh() {
     const previous = active.value
     const before = channels.value
     channels.value = await workspaceService.listChannels()
-    // Drop cached messages of every channel that disappeared, not only the open one.
+
     const remaining = new Set(channels.value.map(channel => channel.id))
     for (const channel of before)
       if (!remaining.has(channel.id)) useMessagesStore().forget(channel.id)
@@ -68,40 +68,35 @@ export const useChannelsStore = defineStore('channels', () => {
   async function leave(id, deleteOnly) {
     await workspaceService.leaveChannel(id, deleteOnly)
     useMessagesStore().forget(id)
-    // Leaving on purpose is not a lost-access event, so clear the selection first.
+
     if (activeId.value === id) activeId.value = null
     await refresh()
     await select(activeId.value)
   }
+  async function updateMembership(action, id, nickname) {
+    const result = await workspaceService[action](id, nickname)
+    await refresh()
+    if (activeId.value === id) await select(id)
+    return result
+  }
   async function invite(id, nickname) {
-    await workspaceService.invite(id, nickname)
-    await refresh()
-    if (activeId.value === id) await select(id)
+    await updateMembership('invite', id, nickname)
   }
-  // Both return the service result so the caller can describe what happened.
-  async function kick(id, nickname) {
-    const result = await workspaceService.kick(id, nickname)
-    await refresh()
-    if (activeId.value === id) await select(id)
-    return result
+  function kick(id, nickname) {
+    return updateMembership('kick', id, nickname)
   }
-  async function revoke(id, nickname) {
-    const result = await workspaceService.revoke(id, nickname)
-    await refresh()
-    if (activeId.value === id) await select(id)
-    return result
+  function revoke(id, nickname) {
+    return updateMembership('revoke', id, nickname)
   }
-  // Demo: age the channel past the limit, then let the expiry sweep remove it.
+
   async function simulateInactivity(id) {
-    // The service deletes the channel, so its name must be read beforehand.
     const name = channels.value.find(channel => channel.id === id)?.name
     await workspaceService.simulateInactivity(id)
     await refresh()
     await select(activeId.value)
     notice.value = `#${name} expired after ${inactiveDays} days without messages and was deleted. Its name can be used for a new channel.`
   }
-  // Re-read channels and the open channel's members after someone else's change.
-  // Called by useLiveUpdates, which decides when delivery is allowed (not offline).
+
   async function sync() {
     if (!channels.value.length && !activeId.value) return
     await refresh()

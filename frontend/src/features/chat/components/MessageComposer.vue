@@ -7,9 +7,9 @@ const emit = defineEmits(['submit'])
 const body = ref('')
 const input = ref(null)
 const typing = useTypingStore()
-// Others see this draft live; sending empties `body`, which clears it.
+
 watch(body, text => typing.publish(props.channel.id, text))
-// Switching channels remounts the composer: the old channel's draft ends.
+
 onUnmounted(() => typing.clearOwn(props.channel.id))
 const mentionQuery = computed(
   () => body.value.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/)?.[1]

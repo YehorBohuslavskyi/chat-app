@@ -6,19 +6,16 @@ import { useMessagesStore } from '../messages.store.js'
 import { useNotificationsStore } from '../../notifications/notifications.store.js'
 import { useTypingStore } from '../typing.store.js'
 
-// Delivery of other people's activity. Offline suspends it; returning online
-// refreshes channels and fetches the missed messages.
 export function useLiveUpdates() {
   const auth = useAuthStore()
   const channels = useChannelsStore()
   const messages = useMessagesStore()
   const notifications = useNotificationsStore()
   const typing = useTypingStore()
-  // Updates that arrived while offline and wait for the next catch-up.
+
   const pending = ref(0)
   async function sync() {
     try {
-      // Notification delivery must not depend on history or membership refresh succeeding.
       const results = await Promise.allSettled([
         notifications.check(id => channels.select(id)),
         (async () => {
@@ -35,13 +32,12 @@ export function useLiveUpdates() {
   }
   function receive(kind = 'data') {
     if (!auth.user) return
-    // Offline: the update stays on the server; count it and deliver on return.
-    // Drafts are live-only, so there is nothing of them to catch up on later.
+
     if (auth.user.status === 'offline') {
       if (kind === 'data') pending.value++
       return
     }
-    // A keystroke elsewhere only needs the drafts, not a full sync.
+
     if (kind === 'drafts') typing.refresh()
     else sync()
   }

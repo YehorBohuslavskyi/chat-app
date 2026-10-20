@@ -13,18 +13,14 @@ onMounted(() => {
   let dismissed = false
   try {
     dismissed = sessionStorage.getItem(dismissedKey) === 'true'
-  } catch {
-    /* The prompt still works when storage is unavailable. */
-  }
+  } catch {}
   open.value = notifications.permission === 'default' && !dismissed
 })
 function dismiss() {
   open.value = false
   try {
     sessionStorage.setItem(dismissedKey, 'true')
-  } catch {
-    /* Dismiss for this visit even without storage. */
-  }
+  } catch {}
 }
 async function enable() {
   requesting.value = true

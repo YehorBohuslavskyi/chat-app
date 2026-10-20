@@ -11,7 +11,7 @@ const modeOptions = [
   { value: 'all', label: 'All new messages' },
   { value: 'mentions', label: 'Only when someone mentions me' }
 ]
-// v-model target: reads the saved preference, saves on change.
+
 const mode = computed({
   get: () => auth.user?.notifications ?? 'all',
   set: async value => {

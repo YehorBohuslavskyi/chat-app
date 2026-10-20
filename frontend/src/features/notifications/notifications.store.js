@@ -6,37 +6,35 @@ import { useAuthStore } from '../auth/auth.store.js'
 import { notificationText, shouldNotify } from './rules.js'
 
 const supported = () => typeof globalThis.Notification === 'function'
-// Quasar starts with appVisible=true until its first visibilitychange event.
-// Read the browser state too, including tabs initially loaded hidden.
+
 const isVisible = () =>
   typeof globalThis.document?.hidden === 'boolean'
     ? !globalThis.document.hidden
     : AppVisibility.appVisible
-// More than this many at once become one summary instead of a burst.
+
 const burstLimit = 3
 
 export const useNotificationsStore = defineStore('notifications', () => {
-  // 'default' (not asked yet) | 'granted' | 'denied' | 'unsupported'
   const permission = ref(supported() ? Notification.permission : 'unsupported')
   const deliveryError = ref('')
   const testStatus = ref('')
   const deliveryStatus = ref('')
   let testTimer = null
-  // Newest message id already considered; null until start() sets a baseline.
+
   let cursor = null
   let generation = 0
   let initializing = null
   let checks = Promise.resolve()
-  // The browser can change permission outside the app (site settings).
+
   function syncPermission() {
     permission.value = supported() ? Notification.permission : 'unsupported'
   }
-  // Browsers only allow this from a user action, such as a button click.
+
   async function requestPermission() {
     if (!supported()) return syncPermission()
     permission.value = await Notification.requestPermission()
   }
-  // Messages that exist before sign-in never notify.
+
   function start() {
     if (initializing) return initializing
     if (cursor !== null) return Promise.resolve()
@@ -122,7 +120,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         : 'Test requested. See the delivery result below.'
     }, 5000)
   }
-  // Serialize cursor reads so simultaneous storage events cannot notify twice.
+
   function check(open) {
     const ticket = generation
     const userId = useAuthStore().user?.id
@@ -152,7 +150,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         show(title, body, () => open(message.channelId))
       }
     })
-    // A failed request must not prevent subsequent updates from being checked.
+
     checks = task.catch(() => {})
     return task
   }
