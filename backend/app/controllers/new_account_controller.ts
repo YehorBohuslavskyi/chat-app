@@ -5,9 +5,17 @@ import UserTransformer from '#transformers/user_transformer'
 
 export default class NewAccountController {
   async store({ request, serialize }: HttpContext) {
-    const { fullName, email, password } = await request.validateUsing(signupValidator)
-
-    const user = await User.create({ fullName, email, password })
+    const { firstName, lastName, nickname, email, password } =
+      await request.validateUsing(signupValidator)
+    const user = await User.create({
+      firstName,
+      lastName,
+      nickname,
+      fullName: `${firstName} ${lastName}`,
+      email,
+      password,
+    })
+    // The token provider uses its own connection, so create it after the user commits.
     const token = await User.accessTokens.create(user)
 
     return serialize({

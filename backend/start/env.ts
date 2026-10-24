@@ -12,6 +12,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
 
   DB_HOST: Env.schema.string({ format: 'host' }),
+  DB_CONNECTION: Env.schema.enum.optional(['sqlite', 'postgres'] as const),
+  DB_SSL: Env.schema.boolean.optional(),
+  DB_SSL_CA_PATH: Env.schema.string.optional(),
   DB_PORT: Env.schema.number(),
   DB_USER: Env.schema.string(),
   DB_PASSWORD: Env.schema.string.optional(),
