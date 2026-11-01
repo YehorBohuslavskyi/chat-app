@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../auth.store.js'
 import { demoCredentials } from '../../../services/mock/fixtures.js'
+import { isDemo } from '../../../services/index.js'
 
 const props = defineProps({ register: Boolean })
 const auth = useAuthStore()
@@ -95,7 +96,10 @@ async function submit(demo = false) {
         :type="showPassword ? 'text' : 'password'"
         label="Password"
         :autocomplete="register ? 'new-password' : 'current-password'"
-        :rules="[value => value.length >= 8 || 'Use at least 8 characters']"
+        :rules="[
+          value =>
+            (value.length >= 8 && value.length <= 32) || 'Use 8–32 characters'
+        ]"
         ><template #append
           ><q-btn
             flat
@@ -114,7 +118,19 @@ async function submit(demo = false) {
         autocomplete="new-password"
         :rules="[value => value === form.password || 'Passwords must match']"
       />
-      <p v-if="error" class="error-banner" role="alert">{{ error }}</p>
+      <p v-if="error || auth.sessionError" class="error-banner" role="alert">{{
+        error || auth.sessionError
+      }}</p>
+      <q-btn
+        v-if="auth.sessionError"
+        flat
+        label="Retry connection"
+        @click="
+          auth
+            .initialize()
+            .then(() => auth.user && router.replace({ name: 'chat' }))
+        "
+      />
       <q-btn
         unelevated
         color="primary"
@@ -126,7 +142,7 @@ async function submit(demo = false) {
         no-caps
       />
     </q-form>
-    <template v-if="!register"
+    <template v-if="!register && isDemo"
       ><div class="divider"><span>Just looking?</span></div
       ><q-btn
         outline

@@ -5,10 +5,15 @@ export default defineConfig(() => ({
   css: ['app.scss'],
   extras: ['roboto-font', 'material-icons'],
   build: {
-    vueRouterMode: 'hash'
+    vueRouterMode: 'hash',
+    defineEnv: {
+      API_BASE_URL: process.env.SIDEBY_API_BASE_URL || '/api/v1',
+      WORKSPACE_MODE: process.env.SIDEBY_WORKSPACE_MODE || 'api'
+    }
   },
   devServer: {
-    open: false
+    open: false,
+    proxy: { '/api': { target: 'http://localhost:3333', changeOrigin: true } }
   },
   framework: {
     plugins: ['AppVisibility']

@@ -1,4 +1,5 @@
 import { createMockService } from './mock/workspace.js'
+import { createApiService } from './api/workspace.js'
 
 export {
   inactiveDays,
@@ -13,4 +14,13 @@ try {
   storage = globalThis.localStorage
   session = globalThis.sessionStorage
 } catch {}
-export const workspaceService = createMockService({ storage, session })
+export const isDemo = import.meta.env.WORKSPACE_MODE === 'demo'
+export const capabilities = {
+  messages: isDemo,
+  presence: isDemo,
+  notifications: isDemo,
+  drafts: isDemo
+}
+export const workspaceService = isDemo
+  ? createMockService({ storage, session })
+  : createApiService({ baseUrl: import.meta.env.API_BASE_URL, session })
