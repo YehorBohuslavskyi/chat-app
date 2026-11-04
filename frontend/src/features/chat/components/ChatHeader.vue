@@ -1,9 +1,17 @@
 <script setup>
-defineProps({ channel: Object, membersOpen: Boolean })
+import { isDemo } from '../../../services/index.js'
+defineProps({
+  channel: Object,
+  membersOpen: Boolean,
+  canInvite: Boolean,
+  canDelete: Boolean,
+  memberCount: Number
+})
 defineEmits([
   'members',
   'invite',
   'leave',
+  'delete',
   'help',
   'simulate-incoming',
   'simulate-typing',
@@ -31,27 +39,39 @@ defineEmits([
         dense
         no-caps
         icon="people_outline"
-        :label="String(channel.memberIds.length)"
+        :label="String(memberCount ?? channel.memberIds.length)"
         :class="{ 'members-active': membersOpen }"
         aria-label="Show channel members"
         @click="$emit('members')"
       /><q-btn flat round dense icon="more_horiz" aria-label="Channel actions"
         ><q-menu
           ><q-list style="min-width: 190px"
-            ><q-item clickable v-close-popup @click="$emit('invite')"
+            ><q-item
+              v-if="canInvite"
+              clickable
+              v-close-popup
+              @click="$emit('invite')"
               ><q-item-section avatar
                 ><q-icon name="person_add_alt" /></q-item-section
               ><q-item-section>Invite a teammate</q-item-section></q-item
             ><q-item clickable v-close-popup @click="$emit('help')"
               ><q-item-section avatar><q-icon name="terminal" /></q-item-section
               ><q-item-section>Command guide</q-item-section></q-item
-            ><q-item clickable v-close-popup @click="$emit('simulate-incoming')"
+            ><q-item
+              v-if="isDemo"
+              clickable
+              v-close-popup
+              @click="$emit('simulate-incoming')"
               ><q-item-section avatar
                 ><q-icon name="mark_chat_unread" /></q-item-section
               ><q-item-section
                 >Demo: receive a message from a teammate</q-item-section
               ></q-item
-            ><q-item clickable v-close-popup @click="$emit('simulate-typing')"
+            ><q-item
+              v-if="isDemo"
+              clickable
+              v-close-popup
+              @click="$emit('simulate-typing')"
               ><q-item-section avatar><q-icon name="keyboard" /></q-item-section
               ><q-item-section
                 >Demo: a teammate types a message</q-item-section
@@ -60,6 +80,7 @@ defineEmits([
               clickable
               v-close-popup
               @click="$emit('simulate-incoming', { delay: 5000 })"
+              v-if="isDemo"
               ><q-item-section avatar><q-icon name="schedule" /></q-item-section
               ><q-item-section
                 >Demo: a message in 5 seconds</q-item-section
@@ -70,6 +91,7 @@ defineEmits([
               @click="
                 $emit('simulate-incoming', { delay: 5000, mention: true })
               "
+              v-if="isDemo"
               ><q-item-section avatar
                 ><q-icon name="alternate_email" /></q-item-section
               ><q-item-section
@@ -79,11 +101,21 @@ defineEmits([
               clickable
               v-close-popup
               @click="$emit('simulate-inactivity')"
+              v-if="isDemo"
               ><q-item-section avatar><q-icon name="update" /></q-item-section
               ><q-item-section
                 >Demo: 31 days without messages</q-item-section
               ></q-item
             ><q-separator /><q-item
+              v-if="canDelete"
+              clickable
+              v-close-popup
+              @click="$emit('delete')"
+              class="text-negative"
+              ><q-item-section avatar
+                ><q-icon name="delete_outline" /></q-item-section
+              ><q-item-section>Delete channel</q-item-section></q-item
+            ><q-item
               clickable
               v-close-popup
               @click="$emit('leave')"

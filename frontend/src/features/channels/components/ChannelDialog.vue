@@ -1,8 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useChannelsStore } from '../channels.store.js'
 import { useAuthStore } from '../../auth/auth.store.js'
-import { workspaceService } from '../../../services/index.js'
+import { isDemo, workspaceService } from '../../../services/index.js'
 const props = defineProps({
   modelValue: Boolean,
   mode: { type: String, default: 'create' },
@@ -31,21 +31,40 @@ const results = computed(() =>
   )
 )
 async function browse() {
+  const ticket = ++searchVersion
   busy.value = true
   error.value = ''
   try {
-    available.value = await workspaceService.browseChannels()
+    const result = await workspaceService.browseChannels(name.value.trim())
+    if (ticket === searchVersion) available.value = result
   } catch (cause) {
-    error.value = cause.message
+    if (ticket === searchVersion) error.value = cause.message
   } finally {
-    busy.value = false
+    if (ticket === searchVersion) busy.value = false
   }
 }
+let searchVersion = 0
+let searchTimer
+watch(name, () => {
+  if (!props.modelValue || props.mode !== 'browse' || isDemo) return
+  clearTimeout(searchTimer)
+  searchVersion++
+  searchTimer = setTimeout(browse, 250)
+})
+onUnmounted(() => {
+  clearTimeout(searchTimer)
+  searchVersion++
+})
 watch(
   () => props.modelValue,
   async open => {
-    if (!open) return
+    if (!open) {
+      clearTimeout(searchTimer)
+      searchVersion++
+      return
+    }
     name.value = ''
+    busy.value = false
     description.value = ''
     type.value = 'public'
     error.value = ''
@@ -66,7 +85,7 @@ async function submit(channelName) {
       })
     else if (props.mode === 'invite')
       await channels.invite(props.channelId, name.value)
-    else await channels.join(channelName)
+    else await channels.join(channelName || name.value)
     emit('update:modelValue', false)
   } catch (cause) {
     error.value = cause.message
@@ -163,14 +182,27 @@ async function submit(channelName) {
                   ><small>{{ channel.description }}</small></span
                 ><span class="join-label"
                   >{{
-                    channel.memberIds.includes(auth.user.id) ? 'Open' : 'Join'
+                    channel.isMember || channel.memberIds.includes(auth.user.id)
+                      ? 'Open'
+                      : 'Join'
                   }}
                   <q-icon name="arrow_forward" /></span></button
               ><p v-if="!busy && !results.length" class="text-muted"
                 >Nothing here by that name.</p
               ></div
-            ><q-btn v-if="error" flat label="Retry" @click="browse"
-          /></template>
+            ><q-btn v-if="error" flat label="Retry" @click="browse" /><q-btn
+              v-if="name.trim()"
+              type="submit"
+              unelevated
+              color="primary"
+              no-caps
+              :loading="busy"
+              :label="`Join #${name.trim()}`"
+            />
+            <p class="text-muted small"
+              >Joining a name that does not exist creates a public channel.</p
+            >
+          </template>
           <q-btn
             v-else
             type="submit"

@@ -27,8 +27,13 @@ defineEmits(['invite', 'close'])
       ><UserAvatar :user="member" :size="33" presence /><div class="member-info"
         ><strong>{{ member.firstName }} {{ member.lastName }}</strong
         ><span
-          >@{{ member.nickName }} ·
-          {{ member.status === 'dnd' ? 'Do not disturb' : member.status }}</span
+          >@{{ member.nickName
+          }}<template v-if="member.status">
+            ·
+            {{
+              member.status === 'dnd' ? 'Do not disturb' : member.status
+            }}</template
+          ></span
         ></div
       ><span v-if="kickVotes[member.id]?.length" class="kick-votes"
         >{{ kickVotes[member.id].length }}/{{ kickThreshold

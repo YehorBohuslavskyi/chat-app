@@ -15,33 +15,53 @@ export const useChannelsStore = defineStore('channels', () => {
 
   const notice = ref('')
   let selection = 0
+  let refreshVersion = 0
   async function refresh() {
+    const ticket = ++refreshVersion
     const previous = active.value
     const before = channels.value
-    channels.value = await workspaceService.listChannels()
+    const result = await workspaceService.listChannels()
+    if (ticket !== refreshVersion) return
+    channels.value = result
 
     const remaining = new Set(channels.value.map(channel => channel.id))
     for (const channel of before)
       if (!remaining.has(channel.id)) useMessagesStore().forget(channel.id)
     if (previous && !remaining.has(previous.id))
       notice.value = `You no longer have access to #${previous.name}. You were removed, or the channel was deleted or expired after ${inactiveDays} days without messages.`
-    if (!channels.value.some(channel => channel.id === activeId.value))
+    if (!channels.value.some(channel => channel.id === activeId.value)) {
+      selection++
+      members.value = []
       activeId.value =
         channels.value.find(channel => channel.id === 'general')?.id ||
         channels.value[0]?.id ||
         null
+    }
   }
   async function select(id) {
     const ticket = ++selection
     activeId.value = id
     members.value = []
     if (!id) return
-    const result = await workspaceService.members(id)
-    if (ticket !== selection) return
-    members.value = result
-    const channel = await workspaceService.acknowledgeInvitation(id)
-    const index = channels.value.findIndex(item => item.id === id)
-    if (index >= 0) channels.value[index] = channel
+    try {
+      const result = await workspaceService.members(id)
+      if (ticket !== selection) return
+      members.value = result
+      const channel = await workspaceService.acknowledgeInvitation(id)
+      if (ticket !== selection) return
+      const index = channels.value.findIndex(item => item.id === id)
+      if (index >= 0 && channel) channels.value[index] = channel
+    } catch (cause) {
+      if (ticket !== selection) return
+      if ([403, 404].includes(cause.status)) {
+        useMessagesStore().forget(id)
+        channels.value = channels.value.filter(channel => channel.id !== id)
+        activeId.value = null
+        members.value = []
+        notice.value = 'This channel is no longer available to you.'
+      }
+      throw cause
+    }
   }
   async function initialize() {
     loading.value = true
@@ -98,12 +118,13 @@ export const useChannelsStore = defineStore('channels', () => {
   }
 
   async function sync() {
-    if (!channels.value.length && !activeId.value) return
     await refresh()
     await select(activeId.value)
+    error.value = ''
   }
   function reset() {
     selection++
+    refreshVersion++
     channels.value = []
     activeId.value = null
     members.value = []

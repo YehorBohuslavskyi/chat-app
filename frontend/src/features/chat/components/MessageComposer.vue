@@ -2,15 +2,20 @@
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { commandHelp } from '../utils/parseCommand.js'
 import { useTypingStore } from '../typing.store.js'
+import { capabilities } from '../../../services/index.js'
 const props = defineProps({ channel: Object, members: Array, busy: Boolean })
 const emit = defineEmits(['submit'])
 const body = ref('')
 const input = ref(null)
 const typing = useTypingStore()
 
-watch(body, text => typing.publish(props.channel.id, text))
+watch(body, text => {
+  if (capabilities.drafts) typing.publish(props.channel.id, text)
+})
 
-onUnmounted(() => typing.clearOwn(props.channel.id))
+onUnmounted(() => {
+  if (capabilities.drafts) typing.clearOwn(props.channel.id)
+})
 const mentionQuery = computed(
   () => body.value.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/)?.[1]
 )
@@ -65,7 +70,11 @@ function insert(value) {
         :id="`compose-${channel.id}`"
         ref="input"
         v-model="body"
-        :placeholder="`Write to #${channel.name}`"
+        :placeholder="
+          capabilities.messages
+            ? `Write to #${channel.name}`
+            : 'Type a channel command, such as /invite nickname'
+        "
         rows="2"
         maxlength="4000"
         :disabled="busy"
@@ -76,6 +85,7 @@ function insert(value) {
             dense
             round
             icon="alternate_email"
+            v-if="capabilities.messages"
             size="sm"
             aria-label="Mention a teammate"
             :disable="busy"
@@ -114,7 +124,7 @@ function insert(value) {
             color="primary"
             icon="arrow_upward"
             class="send-button"
-            aria-label="Send message"
+            :aria-label="capabilities.messages ? 'Send message' : 'Run command'"
             :loading="busy"
             :disable="!body.trim()"
             @click="submit" /></div></div></div

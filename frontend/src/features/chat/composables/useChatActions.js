@@ -3,6 +3,7 @@ import { useAuthStore } from '../../auth/auth.store.js'
 import { useChannelsStore } from '../../channels/channels.store.js'
 import { useMessagesStore } from '../messages.store.js'
 import { parseCommand } from '../utils/parseCommand.js'
+import { capabilities } from '../../../services/index.js'
 
 export function useChatActions({ onMembers, onHelp }) {
   const auth = useAuthStore()
@@ -52,6 +53,10 @@ export function useChatActions({ onMembers, onHelp }) {
     feedback.value = ''
     try {
       const parsed = parseCommand(body)
+      if (parsed.type === 'message' && !capabilities.messages)
+        throw new Error(
+          'Messaging is not available yet. You can use channel commands here.'
+        )
 
       if (parsed.type === 'message' && auth.user?.status === 'offline')
         throw new Error('You are offline. Go online to send messages.')
@@ -82,6 +87,7 @@ export function useChatActions({ onMembers, onHelp }) {
             break
           }
           case 'list':
+            await channels.select(channelId)
             onMembers()
             break
           case 'cancel':

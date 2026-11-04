@@ -13,6 +13,7 @@ import UserAvatar from '../components/UserAvatar.vue'
 import BrandMark from '../components/BrandMark.vue'
 import NotificationPrompt from '../features/notifications/components/NotificationPrompt.vue'
 import NotificationSettings from '../features/notifications/components/NotificationSettings.vue'
+import { capabilities, isDemo } from '../services/index.js'
 
 const auth = useAuthStore()
 const channels = useChannelsStore()
@@ -95,19 +96,15 @@ onMounted(() => channels.initialize())
             ><q-icon name="search" size="17px" /><span
               >Find your channel</span
             ></button
-          ><q-btn
-            flat
-            round
-            dense
-            icon="help_outline"
-            aria-label="About this prototype"
+          ><q-btn flat round dense icon="help_outline" aria-label="About Sideby"
             ><q-menu
               ><div class="q-pa-lg" style="max-width: 300px"
                 ><strong>About Sideby</strong
-                ><p class="text-muted q-mt-sm"
-                  >Sideby is a local demo. Your workspace stays in this browser;
-                  live collaboration is coming later.</p
-                ></div
+                ><p class="text-muted q-mt-sm">{{
+                  isDemo
+                    ? 'This is a local demo workspace.'
+                    : 'Your account and channels are saved. Messaging and live collaboration are coming soon.'
+                }}</p></div
               ></q-menu
             ></q-btn
           ></q-toolbar
@@ -195,7 +192,7 @@ onMounted(() => channels.initialize())
                       }}</q-item-label></q-item-section
                     ></q-item
                   ><q-separator /><q-item
-                    v-for="option in statusOptions"
+                    v-for="option in capabilities.presence ? statusOptions : []"
                     :key="option.value"
                     clickable
                     v-close-popup
@@ -217,6 +214,7 @@ onMounted(() => channels.initialize())
                     clickable
                     v-close-popup
                     @click="settingsOpen = true"
+                    v-if="capabilities.notifications"
                     ><q-item-section avatar
                       ><q-icon name="notifications_none" /></q-item-section
                     ><q-item-section>Notifications</q-item-section></q-item
@@ -267,8 +265,11 @@ onMounted(() => channels.initialize())
               @open-channel-dialog="openDialog" /></router-view></div
       ></q-page-container>
     </q-layout>
-    <NotificationPrompt />
-    <NotificationSettings v-model="settingsOpen" />
+    <NotificationPrompt v-if="capabilities.notifications" />
+    <NotificationSettings
+      v-if="capabilities.notifications"
+      v-model="settingsOpen"
+    />
     <ChannelDialog
       v-model="dialogOpen"
       :mode="dialogMode"

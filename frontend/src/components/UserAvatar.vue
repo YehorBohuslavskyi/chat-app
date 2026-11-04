@@ -14,10 +14,14 @@ defineProps({
       width: `${size}px`,
       height: `${size}px`
     }"
-    :aria-label="`${user.firstName} ${user.lastName}${presence ? `, ${user.status}` : ''}`"
+    :aria-label="`${user.firstName} ${user.lastName}${presence && user.status ? `, ${user.status}` : ''}`"
   >
     {{ user.firstName?.[0] }}{{ user.lastName?.[0] }}
-    <span v-if="presence" class="presence" :class="user.status" />
+    <span
+      v-if="presence && user.status"
+      class="presence"
+      :class="user.status"
+    />
   </span>
 </template>
 

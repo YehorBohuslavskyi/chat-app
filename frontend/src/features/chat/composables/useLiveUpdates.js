@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { workspaceService } from '../../../services/index.js'
+import { isDemo, workspaceService } from '../../../services/index.js'
 import { useAuthStore } from '../../auth/auth.store.js'
 import { useChannelsStore } from '../../channels/channels.store.js'
 import { useMessagesStore } from '../messages.store.js'
@@ -14,8 +14,15 @@ export function useLiveUpdates() {
   const typing = useTypingStore()
 
   const pending = ref(0)
+  let syncing = false
   async function sync() {
+    if (syncing || !auth.user) return
+    syncing = true
     try {
+      if (!isDemo) {
+        await channels.sync()
+        return
+      }
       const results = await Promise.allSettled([
         notifications.check(id => channels.select(id)),
         (async () => {
@@ -28,6 +35,8 @@ export function useLiveUpdates() {
       if (failure) throw failure.reason
     } catch (cause) {
       channels.error = cause.message
+    } finally {
+      syncing = false
     }
   }
   function receive(kind = 'data') {
@@ -55,11 +64,24 @@ export function useLiveUpdates() {
     }
   )
   let stop
+  let interval
+  const focus = () => {
+    if (!document.hidden) sync()
+  }
   onMounted(() => {
+    if (!isDemo) {
+      interval = setInterval(focus, 10000)
+      globalThis.addEventListener('focus', focus)
+      document.addEventListener('visibilitychange', focus)
+      return
+    }
     stop = workspaceService.onExternalChange(receive)
     notifications.start().catch(() => {})
   })
   onUnmounted(() => {
+    clearInterval(interval)
+    globalThis.removeEventListener('focus', focus)
+    document.removeEventListener('visibilitychange', focus)
     stop?.()
     notifications.stop()
   })

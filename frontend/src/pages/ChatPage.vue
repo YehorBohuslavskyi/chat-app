@@ -14,7 +14,7 @@ import ChannelMembers from '../features/channels/components/ChannelMembers.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { commandHelp } from '../features/chat/utils/parseCommand.js'
-import { kickThreshold } from '../services/index.js'
+import { capabilities, kickThreshold } from '../services/index.js'
 
 const emit = defineEmits(['open-channel-dialog'])
 const auth = useAuthStore()
@@ -96,20 +96,30 @@ const canInvite = computed(
     ><template v-if="channels.active"
       ><ChatHeader
         :channel="channels.active"
+        :can-invite="canInvite"
+        :can-delete="channels.active.adminId === auth.user?.id"
+        :member-count="channels.members.length"
         :members-open="membersOpen"
         @members="membersOpen = !membersOpen"
         @invite="emit('open-channel-dialog', 'invite')"
         @leave="askLeave()"
+        @delete="askLeave(true)"
         @simulate-incoming="simulateIncoming"
         @simulate-typing="simulateTyping()"
         @simulate-inactivity="simulateInactivity()"
         @help="helpOpen = true" /><div class="conversation-body"
         ><div class="conversation-column"
           ><MessageList
+            v-if="capabilities.messages"
             :key="channels.activeId"
             :channel="channels.active"
             :members="channels.members"
-            :user="auth.user" /><div
+            :user="auth.user" /><EmptyState
+            v-else
+            class="messaging-placeholder"
+            icon="forum"
+            title="Your channel is ready."
+            description="Invite people and manage your channel. Messaging is coming soon." /><div
             v-if="feedback"
             class="command-feedback"
             role="status"
@@ -125,6 +135,7 @@ const canInvite = computed(
               aria-label="Dismiss feedback"
               @click="feedback = ''" /></div
           ><TypingIndicator
+            v-if="capabilities.drafts"
             :key="channels.activeId"
             :channel="channels.active" /><MessageComposer
             :key="channels.activeId"
@@ -181,7 +192,7 @@ const canInvite = computed(
       "
       :description="
         adminLeaving
-          ? 'You are the administrator. Leaving permanently deletes this channel and its messages for everyone in this local prototype.'
+          ? 'You are the administrator. Leaving permanently deletes this channel and its messages for everyone.'
           : confirmChannel?.type === 'private'
             ? 'You will lose access to this private channel. You will need a new invitation to return.'
             : 'The channel will leave your sidebar. You can join it again from Browse channels.'
@@ -249,6 +260,10 @@ const canInvite = computed(
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+.messaging-placeholder {
+  flex: 1;
+  overflow-y: auto;
 }
 .command-feedback {
   display: flex;
