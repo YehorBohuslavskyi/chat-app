@@ -15,6 +15,7 @@
   "author": "Yehor Bohuslavskyi <yehorbohuslavskyi@gmail.com>",
   "type": "module",
   "scripts": {
+    "test": "node --test tests/*.test.js",
     "lint": "oxfmt && oxlint --fix",
     "lint:check": "oxfmt --check && oxlint",
     "dev": "quasar dev",
