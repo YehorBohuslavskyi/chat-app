@@ -19,6 +19,8 @@ export type ScannedRoutes = {
     'channels.kick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.leave': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'messages.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'messages.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.command': { paramsTuple?: []; params?: {} }
   }
   GET: {
@@ -26,12 +28,14 @@ export type ScannedRoutes = {
     'channels.index': { paramsTuple?: []; params?: {} }
     'channels.discover': { paramsTuple?: []; params?: {} }
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'messages.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
     'channels.discover': { paramsTuple?: []; params?: {} }
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'messages.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
@@ -44,6 +48,7 @@ export type ScannedRoutes = {
     'channels.revoke': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.kick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.leave': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'messages.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.command': { paramsTuple?: []; params?: {} }
   }
   DELETE: {

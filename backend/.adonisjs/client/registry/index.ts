@@ -96,6 +96,18 @@ const routes = {
     tokens: [{"old":"/api/v1/channels/:id","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['channels.destroy']['types'],
   },
+  'messages.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/channels/:id/messages',
+    tokens: [{"old":"/api/v1/channels/:id/messages","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"messages","end":""}],
+    types: placeholder as Registry['messages.index']['types'],
+  },
+  'messages.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/messages',
+    tokens: [{"old":"/api/v1/channels/:id/messages","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"messages","end":""}],
+    types: placeholder as Registry['messages.store']['types'],
+  },
   'channels.command': {
     methods: ["POST"],
     pattern: '/api/v1/commands',

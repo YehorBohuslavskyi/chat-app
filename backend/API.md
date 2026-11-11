@@ -46,6 +46,20 @@ Ordinary public kicks record votes; the first two votes leave membership intact.
 
 Typical errors: 401 unauthenticated, 403 `E_NOT_MEMBER`/`E_NOT_ADMIN`/`E_BANNED`/`E_PRIVATE_CHANNEL`/`E_PROTECTED_MEMBER`, 404 `E_CHANNEL_NOT_FOUND`/`E_USER_NOT_FOUND`, 409 `E_ALREADY_EXISTS`, 422 validation or command syntax errors. Expired channels behave as missing.
 
+## Messages (all authenticated, members only)
+
+- `POST /api/v1/channels/:id/messages` with `{ "body": "..." }` → `201 { data: message }`.
+  - `body` is trimmed and must be 1–4000 characters (422 otherwise).
+  - Message: `id`, `channelId`, `senderId`, `body`, `createdAt` (ISO), `sender` (`id`, `nickname`, `firstName`, `lastName`), `mentions` (user IDs).
+  - `@nickname` mentions use the same pattern as the frontend (`(?<![\w@])@name`, case-insensitive). Only current channel members other than the sender are stored in `message_mentions`.
+  - The message, its mentions and `channels.last_message_at` are saved in one transaction under the channel lock (`ChannelService.withMember`).
+  - Errors: 401 unauthenticated, 403 `E_NOT_MEMBER`, 404 `E_CHANNEL_NOT_FOUND` (also for expired channels), 422 validation.
+- `GET /api/v1/channels/:id/messages?limit=20[&before=<id>|&after=<id>]` → `{ data: { items, hasMore } }`.
+  - No cursor: the newest `limit` messages. `before`: the page just older than that id. `after`: messages newer than that id (catch-up). Not both at once.
+  - `limit` is 1–50 (default 20). `items` are always oldest first, in the same shape as above.
+  - Same errors as sending.
+  - The frontend currently polls this with `after` every 3 seconds as a stand-in for real-time delivery. Ordering by `id` is fine for this; real-time delivery still needs the race-safe strategy from the handoff.
+
 ## Teammate integration
 
 Use `ChannelService.withMember(channelId, userId, async (trx, channel) => ...)` for message creation/history. This locks the channel, commits expiration if necessary, and authorizes membership. Write messages and update `last_message_at` using that same transaction; acquire the channel lock before other locks. Keep network calls outside this callback. Sending must set the clock from server time, never from client input. Do not wrap the service in another transaction: its event boundary assumes it owns the outer commit.

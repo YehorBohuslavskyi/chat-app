@@ -2,6 +2,7 @@ import { middleware } from '#start/kernel'
 import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
 const ChannelsController = () => import('#controllers/channels_controller')
+const MessagesController = () => import('#controllers/messages_controller')
 
 router.get('/', () => {
   return { hello: 'world' }
@@ -39,6 +40,8 @@ router
         router.post('channels/:id/kick', [ChannelsController, 'kick'])
         router.post('channels/:id/leave', [ChannelsController, 'leave'])
         router.delete('channels/:id', [ChannelsController, 'destroy'])
+        router.get('channels/:id/messages', [MessagesController, 'index'])
+        router.post('channels/:id/messages', [MessagesController, 'store'])
         router.post('commands', [ChannelsController, 'command'])
       })
       .use(middleware.auth())
