@@ -20,7 +20,9 @@ export function useLiveUpdates() {
     syncing = true
     try {
       if (!isDemo) {
+        // Polling stands in for the real-time transport until it exists.
         await channels.sync()
+        await messages.catchUpAll()
         return
       }
       const results = await Promise.allSettled([
@@ -70,7 +72,7 @@ export function useLiveUpdates() {
   }
   onMounted(() => {
     if (!isDemo) {
-      interval = setInterval(focus, 10000)
+      interval = setInterval(focus, 3000)
       globalThis.addEventListener('focus', focus)
       document.addEventListener('visibilitychange', focus)
       return

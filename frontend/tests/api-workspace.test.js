@@ -131,7 +131,7 @@ test('a late protected response cannot revive an old account session', async () 
   assert.equal(service.sessionUser(), null)
 })
 
-test('moderation adapts outcomes and unavailable messaging never reports success', async () => {
+test('moderation adapts outcomes and features without a backend never report success', async () => {
   let input
   const service = createApiService({
     fetcher: async (url, options) => {
@@ -147,5 +147,41 @@ test('moderation adapts outcomes and unavailable messaging never reports success
     needed: 3
   })
   assert.equal(input.nickname, 'ada')
-  await assert.rejects(service.sendMessage('2', 'hello'), /not available/)
+  await assert.rejects(service.setStatus('dnd'), /not available/)
+})
+
+test('messages: send and history map backend payloads and pass cursors', async () => {
+  const requests = []
+  const message = {
+    id: 7,
+    channelId: 2,
+    senderId: 1,
+    body: 'hi @bob',
+    createdAt: '2026-11-11T10:00:00.000Z',
+    sender: profile,
+    mentions: [3]
+  }
+  const service = createApiService({
+    fetcher: async (url, options) => {
+      requests.push({ url, ...options })
+      return options.method === 'POST'
+        ? response(message, 201)
+        : response({ items: [message], hasMore: true })
+    }
+  })
+  const sent = await service.sendMessage('2', 'hi @bob')
+  assert.equal(requests[0].url, '/api/v1/channels/2/messages')
+  assert.deepEqual(JSON.parse(requests[0].body), { body: 'hi @bob' })
+  assert.equal(sent.id, 7)
+  assert.equal(sent.channelId, '2')
+  assert.equal(sent.senderId, '1')
+  assert.equal(sent.sender.nickName, 'ada')
+  assert.deepEqual(sent.mentions, ['3'])
+
+  const page = await service.messageHistory('2', { before: 7, limit: 20 })
+  assert.equal(requests[1].url, '/api/v1/channels/2/messages?limit=20&before=7')
+  assert.equal(page.hasMore, true)
+  assert.equal(page.items[0].sender.firstName, 'Ada')
+  await service.messageHistory('2', { after: 0, limit: 50 })
+  assert.equal(requests[2].url, '/api/v1/channels/2/messages?limit=50&after=0')
 })

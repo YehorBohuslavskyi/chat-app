@@ -16,7 +16,7 @@ try {
 } catch {}
 export const isDemo = import.meta.env.WORKSPACE_MODE === 'demo'
 export const capabilities = {
-  messages: isDemo,
+  messages: true,
   presence: isDemo,
   notifications: isDemo,
   drafts: isDemo

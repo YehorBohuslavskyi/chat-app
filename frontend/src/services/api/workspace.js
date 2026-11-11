@@ -115,6 +115,13 @@ export function createApiService({
     cache.set(id, channel)
     return channel
   }
+  const mapMessage = value => ({
+    ...value,
+    channelId: String(value.channelId),
+    senderId: String(value.senderId),
+    sender: mapUser(value.sender),
+    mentions: (value.mentions || []).map(String)
+  })
   async function authenticate(path, input) {
     const result = await request(path, {
       method: 'POST',
@@ -232,8 +239,16 @@ export function createApiService({
       return { nickName: normalize(nickname) }
     },
     onExternalChange: () => () => {},
-    messageHistory: unavailable,
-    sendMessage: unavailable,
+    async messageHistory(id, { before = null, after = null, limit = 20 } = {}) {
+      const query = new URLSearchParams({ limit: String(limit) })
+      if (before !== null) query.set('before', String(before))
+      if (after !== null) query.set('after', String(after))
+      const result = await request(`/channels/${id}/messages?${query}`)
+      return { items: result.items.map(mapMessage), hasMore: result.hasMore }
+    },
+    async sendMessage(id, body) {
+      return mapMessage(await post(`/channels/${id}/messages`, { body }))
+    },
     setStatus: unavailable,
     setNotificationMode: unavailable,
     incoming: unavailable,
